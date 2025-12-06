@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <!-- Primary Meta Tags -->
+    <title>BrandAura AI - Track Your Brand's Visibility in AI Search</title>
+    <meta name="title" content="BrandAura AI - Track Your Brand's Visibility in AI Search" />
+    <meta name="description" content="Track how ChatGPT, Claude, Gemini & Perplexity see your brand. Get visibility scores, competitor analysis, and alerts when your ranking drops. Start free." />
+    <meta name="keywords" content="AI visibility, brand tracking, ChatGPT monitoring, Claude tracking, AI search, brand mentions, AI SEO, LLM visibility" />
+    <meta name="author" content="BrandAura AI" />
+    <meta name="robots" content="index, follow" />
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.svg" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <meta name="theme-color" content="#6366f1" />
+    
+    <!-- Open Graph / Facebook - URLs injected at build time -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" id="og-url" content="" />
+    <meta property="og:title" content="BrandAura AI - Track Your Brand's Visibility in AI Search" />
+    <meta property="og:description" content="Track how ChatGPT, Claude, Gemini & Perplexity see your brand. Get visibility scores, competitor analysis, and alerts when your ranking drops. Start free." />
+    <meta property="og:image" id="og-image" content="" />
+    <meta property="og:site_name" content="BrandAura AI" />
+    
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" id="twitter-url" content="" />
+    <meta name="twitter:title" content="BrandAura AI - Track Your Brand's Visibility in AI Search" />
+    <meta name="twitter:description" content="Track how ChatGPT, Claude, Gemini & Perplexity see your brand. Get visibility scores, competitor analysis, and alerts when your ranking drops. Start free." />
+    <meta name="twitter:image" id="twitter-image" content="" />
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Dynamic URL injection -->
+    <script>
+      // Set URLs from environment or default
+      const appUrl = '%VITE_APP_URL%' !== '' && !('%VITE_APP_URL%'.includes('VITE_')) 
+        ? '%VITE_APP_URL%' 
+        : window.location.origin;
+      
+      document.getElementById('og-url')?.setAttribute('content', appUrl + '/');
+      document.getElementById('og-image')?.setAttribute('content', appUrl + '/og-image.png');
+      document.getElementById('twitter-url')?.setAttribute('content', appUrl + '/');
+      document.getElementById('twitter-image')?.setAttribute('content', appUrl + '/og-image.png');
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

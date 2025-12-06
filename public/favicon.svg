@@ -1,0 +1,33 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0a0a0f"/>
+      <stop offset="100%" stop-color="#12121a"/>
+    </linearGradient>
+    <linearGradient id="bGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#8b5cf6"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="12" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="512" height="512" rx="96" fill="url(#bgGradient)"/>
+  
+  <!-- Outer glow ring -->
+  <circle cx="256" cy="256" r="220" fill="none" stroke="url(#bGradient)" stroke-width="8" opacity="0.2"/>
+  
+  <!-- Inner glow ring -->
+  <circle cx="256" cy="256" r="190" fill="none" stroke="url(#bGradient)" stroke-width="10" opacity="0.35"/>
+  
+  <!-- The B letter with glow -->
+  <g filter="url(#glow)">
+    <text x="256" y="340" text-anchor="middle" font-size="280" font-weight="800" font-family="Inter, system-ui, sans-serif" fill="url(#bGradient)">B</text>
+  </g>
+</svg>

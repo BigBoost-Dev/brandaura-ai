@@ -1,0 +1,74 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#050507"/>
+      <stop offset="50%" stop-color="#0a0a12"/>
+      <stop offset="100%" stop-color="#0f0f18"/>
+    </linearGradient>
+    <linearGradient id="bGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#8b5cf6"/>
+    </linearGradient>
+    <linearGradient id="textGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="rgba(255,255,255,0.9)"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="8" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="bigGlow" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="40" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bgGradient)"/>
+  
+  <!-- Background glow effect -->
+  <circle cx="300" cy="315" r="200" fill="#6366f1" opacity="0.08" filter="url(#bigGlow)"/>
+  
+  <!-- Logo Icon -->
+  <g transform="translate(150, 215)">
+    <!-- Outer glow ring -->
+    <circle cx="100" cy="100" r="90" fill="none" stroke="url(#bGradient)" stroke-width="4" opacity="0.2"/>
+    <!-- Inner glow ring -->
+    <circle cx="100" cy="100" r="78" fill="none" stroke="url(#bGradient)" stroke-width="5" opacity="0.35"/>
+    <!-- The B letter with glow -->
+    <g filter="url(#glow)">
+      <text x="100" y="135" text-anchor="middle" font-size="120" font-weight="800" font-family="Inter, system-ui, sans-serif" fill="url(#bGradient)">B</text>
+    </g>
+  </g>
+  
+  <!-- Brand Name -->
+  <text x="400" y="290" font-size="72" font-weight="800" font-family="Inter, system-ui, sans-serif" fill="url(#textGradient)">BrandAura</text>
+  <text x="726" y="290" font-size="72" font-weight="700" font-family="Inter, system-ui, sans-serif" fill="#818cf8">AI</text>
+  
+  <!-- Tagline -->
+  <text x="400" y="360" font-size="28" font-weight="500" font-family="Inter, system-ui, sans-serif" fill="rgba(255,255,255,0.6)">Track Your Brand's Visibility in AI Search</text>
+  
+  <!-- Platform badges -->
+  <g transform="translate(400, 400)">
+    <rect x="0" y="0" width="100" height="36" rx="8" fill="rgba(255,255,255,0.08)"/>
+    <text x="50" y="24" text-anchor="middle" font-size="14" font-weight="600" font-family="Inter, system-ui, sans-serif" fill="rgba(255,255,255,0.7)">ChatGPT</text>
+    
+    <rect x="115" y="0" width="80" height="36" rx="8" fill="rgba(255,255,255,0.08)"/>
+    <text x="155" y="24" text-anchor="middle" font-size="14" font-weight="600" font-family="Inter, system-ui, sans-serif" fill="rgba(255,255,255,0.7)">Claude</text>
+    
+    <rect x="210" y="0" width="85" height="36" rx="8" fill="rgba(255,255,255,0.08)"/>
+    <text x="252" y="24" text-anchor="middle" font-size="14" font-weight="600" font-family="Inter, system-ui, sans-serif" fill="rgba(255,255,255,0.7)">Gemini</text>
+    
+    <rect x="310" y="0" width="100" height="36" rx="8" fill="rgba(255,255,255,0.08)"/>
+    <text x="360" y="24" text-anchor="middle" font-size="14" font-weight="600" font-family="Inter, system-ui, sans-serif" fill="rgba(255,255,255,0.7)">Perplexity</text>
+  </g>
+  
+  <!-- URL -->
+  <text x="1050" y="580" text-anchor="middle" font-size="20" font-weight="600" font-family="Inter, system-ui, sans-serif" fill="rgba(255,255,255,0.4)">brandaura.bigboost.agency</text>
+</svg>
