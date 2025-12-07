@@ -124,42 +124,36 @@ export default function Header({
             </svg>
           </button>
 
-          <Link to="/" className="flex items-center gap-2">
-            <LogoIcon size={32} />
-            <span className="text-lg font-bold hidden md:block">BrandAura<span className="text-primary-400 ml-1">AI</span></span>
+          <Link to="/" className="flex items-center">
+            <LogoIcon size={36} />
           </Link>
 
-          {/* Desktop Brand Switcher */}
-          <div className="hidden lg:flex items-center gap-2 pl-6 border-l border-white/10">
+          {/* Brand Switcher - visible on md and up */}
+          <div className="hidden md:flex items-center gap-2 pl-4 border-l border-white/10">
             {brands.map(brand => (
               <button
                 key={brand.id}
                 onClick={() => onBrandChange(brand.id)}
-                className={`px-4 py-2 rounded-xl text-sm font-semibold transition ${
+                className={`px-3 py-1.5 rounded-xl text-sm font-semibold transition ${
                   activeBrandId === brand.id
-                    ? 'bg-primary-500/20 border-2 border-primary-500/50 text-white'
+                    ? 'bg-primary-500/20 border border-primary-500/50 text-white'
                     : 'bg-white/[0.03] border border-white/10 text-white/60 hover:text-white hover:border-white/20'
                 }`}
               >
                 {brand.name}
               </button>
             ))}
-            <button onClick={onAddBrand} className="px-3 py-2 rounded-xl border border-dashed border-white/20 text-white/50 text-sm hover:border-white/30">+ Add</button>
+            <button onClick={onAddBrand} className="px-2 py-1.5 rounded-xl border border-dashed border-white/20 text-white/50 text-sm hover:border-white/30">+</button>
           </div>
 
-          {/* Mobile Brand Name */}
-          <div className="lg:hidden">
-            <span className="text-sm font-semibold text-white/80">{brands.find(b => b.id === activeBrandId)?.name}</span>
-          </div>
         </div>
 
         {/* Right */}
-        <div className="flex items-center gap-2 md:gap-4">
+        <div className="flex items-center gap-2">
           {isRunning && (
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-primary-500/10 border border-primary-500/30">
+            <div className="flex items-center gap-2 px-2 py-1 rounded-lg bg-primary-500/10 border border-primary-500/30">
               <div className="w-2 h-2 rounded-full bg-primary-400 animate-pulse" />
               <span className="text-primary-400 text-sm font-semibold">{progress.current}/{progress.total}</span>
-              <span className="text-white/40 text-xs max-w-24 truncate hidden md:inline">{progress.platform}</span>
             </div>
           )}
 
@@ -167,11 +161,11 @@ export default function Header({
             <div className="relative">
               <button
                 onClick={() => setShowPlatformSelector(!showPlatformSelector)}
-                className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/[0.03] border border-white/10 text-white/70 hover:text-white transition text-sm"
+                className="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-white/[0.03] border border-white/10 text-white/70 hover:text-white transition text-sm"
               >
-                <span className="hidden md:inline">{selectedPlatforms?.length || 0} Models</span>
-                <span className="md:hidden">🤖 {selectedPlatforms?.length || 0}</span>
-                <svg className={`w-4 h-4 transition-transform ${showPlatformSelector ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <span>🤖</span>
+                <span>{selectedPlatforms?.length || 0}</span>
+                <svg className={`w-3 h-3 transition-transform ${showPlatformSelector ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
               </button>
@@ -186,31 +180,25 @@ export default function Header({
           )}
 
           {isRunning ? (
-            <button onClick={onStopTests} className="btn bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20 text-sm px-3 md:px-4">
-              <span className="hidden md:inline">⏹ Stop</span>
-              <span className="md:hidden">⏹</span>
+            <button onClick={onStopTests} className="px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20 text-sm font-semibold">
+              ⏹ Stop
             </button>
           ) : (
-            <button onClick={onRunTests} className="btn btn-primary text-sm px-3 md:px-4">
-              <span className="hidden md:inline">▶ Run Tests</span>
-              <span className="md:hidden">▶ Run</span>
+            <button onClick={onRunTests} className="px-3 py-1.5 rounded-lg bg-primary-500 hover:bg-primary-600 text-white text-sm font-semibold">
+              ▶ Run
             </button>
           )}
 
           {/* User Menu */}
           <div className="relative" ref={userMenuRef}>
-            <button onClick={() => setShowUserMenu(!showUserMenu)} className="flex items-center gap-3">
-              <img src={user?.user_metadata?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email}`} alt="" className="w-9 h-9 rounded-xl" />
-              <div className="hidden lg:block text-left">
-                <div className="text-sm font-medium">{profile?.full_name || user?.email?.split('@')[0]}</div>
-                <div className="text-xs text-white/40 capitalize">{profile?.plan || 'Free'} Plan</div>
-              </div>
+            <button onClick={() => setShowUserMenu(!showUserMenu)}>
+              <img src={user?.user_metadata?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email}`} alt="" className="w-8 h-8 rounded-lg" />
             </button>
             
             {showUserMenu && (
               <div className="absolute top-full right-0 mt-2 w-48 bg-dark-300 border border-white/10 rounded-xl shadow-xl z-50 overflow-hidden">
-                <div className="px-4 py-3 border-b border-white/10 lg:hidden">
-                  <div className="font-medium text-sm">{profile?.full_name || user?.email?.split('@')[0]}</div>
+                <div className="px-4 py-3 border-b border-white/10">
+                  <div className="font-medium text-sm truncate">{profile?.full_name || user?.email?.split('@')[0]}</div>
                   <div className="text-xs text-white/40">{profile?.plan || 'Free'} Plan</div>
                 </div>
                 <button onClick={() => { onSignOut(); setShowUserMenu(false) }} className="w-full px-4 py-3 text-left text-sm text-white/70 hover:bg-white/5">
