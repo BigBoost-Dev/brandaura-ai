@@ -117,8 +117,9 @@ export default function Header({
             </svg>
           </button>
 
-          <Link to="/" className="flex items-center">
+          <Link to="/" className="flex items-center gap-2">
             <LogoIcon size={36} />
+            <span className="text-lg font-bold hidden md:block">BrandAura<span className="text-primary-400 ml-1">AI</span></span>
           </Link>
 
           {/* Brand Switcher - visible on md and up */}
