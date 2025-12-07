@@ -13,16 +13,25 @@ import BrandSetup from '../components/BrandSetup'
 export default function Dashboard() {
   const navigate = useNavigate()
   const { user, profile, loading: authLoading, signOut } = useAuthStore()
-  const { brands, activeBrandId, loadBrands, getActiveBrand, setActiveBrand } = useBrandsStore()
+  const { brands, activeBrandId, loadBrands, getActiveBrand, setActiveBrand, deleteBrand } = useBrandsStore()
   const { loadResults, addResults, getResults } = useResultsStore()
   const { activeTab, setActiveTab, isTestRunning, setTestRunning, testProgress, setTestProgress, addLog } = useUIStore()
   
   const [showSetup, setShowSetup] = useState(false)
   const [metrics, setMetrics] = useState(null)
-  const abortRef = useRef(false)
+  const [selectedPlatforms, setSelectedPlatforms] = useState([])
+  const [showPlatformSelector, setShowPlatformSelector] = useState(false)
+  const abortControllerRef = useRef(null)
 
   const activeBrand = getActiveBrand()
   const brandResults = activeBrand ? getResults(activeBrand.id) : []
+
+  // Initialize selected platforms from brand
+  useEffect(() => {
+    if (activeBrand?.selected_platforms) {
+      setSelectedPlatforms(activeBrand.selected_platforms)
+    }
+  }, [activeBrand?.id])
 
   useEffect(() => {
     if (!authLoading && !user) navigate('/login', { replace: true })
@@ -47,13 +56,24 @@ export default function Dashboard() {
     if (!authLoading && brands.length === 0) setShowSetup(true)
   }, [brands, authLoading])
 
+  const stopTests = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+      addLog({ message: '⏹ Tests stopped by user', type: 'warning' })
+    }
+  }, [addLog])
+
   const runTests = useCallback(async () => {
     if (isTestRunning || !activeBrand || !user) return
-    abortRef.current = false
+    
+    // Create new AbortController for this run
+    abortControllerRef.current = new AbortController()
+    
     setTestRunning(true)
     addLog({ message: `🚀 Starting tests for ${activeBrand.name}`, type: 'info' })
 
-    const platforms = activeBrand.selected_platforms || ['gpt-4o', 'claude-sonnet']
+    // Use selected platforms (can be changed per run)
+    const platforms = selectedPlatforms.length > 0 ? selectedPlatforms : (activeBrand.selected_platforms || ['gpt-4o', 'claude-sonnet'])
     const queries = generateQueries(activeBrand, platforms)
     setTestProgress({ current: 0, total: queries.length, platform: '', query: '' })
 
@@ -61,7 +81,12 @@ export default function Dashboard() {
     const batchId = Date.now().toString()
 
     for (let i = 0; i < queries.length; i++) {
-      if (abortRef.current) { addLog({ message: '⏹ Cancelled', type: 'warning' }); break }
+      // Check if aborted
+      if (abortControllerRef.current?.signal.aborted) {
+        addLog({ message: '⏹ Tests cancelled', type: 'warning' })
+        break
+      }
+
       const { query, type, platformId } = queries[i]
       const platform = AI_PLATFORMS[platformId]
       setTestProgress({ current: i + 1, total: queries.length, platform: platform.name, query })
@@ -81,7 +106,10 @@ export default function Dashboard() {
           })
           addLog({ message: `${MENTION_TYPES[analysis.brandMention]?.emoji} ${platform.name}: ${MENTION_TYPES[analysis.brandMention]?.label}`, type: 'info' })
         } else addLog({ message: `❌ ${platform.name}: ${error}`, type: 'error' })
-      } catch (err) { addLog({ message: `❌ ${err.message}`, type: 'error' }) }
+      } catch (err) { 
+        if (err.name === 'AbortError') break
+        addLog({ message: `❌ ${err.message}`, type: 'error' }) 
+      }
       await new Promise(r => setTimeout(r, 1100))
     }
 
@@ -89,8 +117,10 @@ export default function Dashboard() {
       await addResults(activeBrand.id, newResults)
       addLog({ message: `✅ Done! ${newResults.length} results saved`, type: 'success' })
     }
+    
+    abortControllerRef.current = null
     setTestRunning(false)
-  }, [isTestRunning, activeBrand, user, addLog, setTestProgress, setTestRunning, addResults])
+  }, [isTestRunning, activeBrand, user, selectedPlatforms, addLog, setTestProgress, setTestRunning, addResults])
 
   if (authLoading) return <div className="min-h-screen bg-dark-400 flex items-center justify-center"><div className="spinner w-8 h-8" /></div>
   if (showSetup) return <BrandSetup userId={user?.id} onComplete={() => setShowSetup(false)} onCancel={brands.length > 0 ? () => setShowSetup(false) : null} />
@@ -99,7 +129,9 @@ export default function Dashboard() {
     <div className="min-h-screen bg-dark-400 text-white">
       <Header user={user} profile={profile} brands={brands} activeBrandId={activeBrandId}
         onBrandChange={setActiveBrand} onAddBrand={() => setShowSetup(true)} onSignOut={signOut}
-        isRunning={isTestRunning} progress={testProgress} onRunTests={runTests} onStopTests={() => abortRef.current = true} />
+        isRunning={isTestRunning} progress={testProgress} onRunTests={runTests} onStopTests={stopTests}
+        showPlatformSelector={showPlatformSelector} setShowPlatformSelector={setShowPlatformSelector}
+        selectedPlatforms={selectedPlatforms} setSelectedPlatforms={setSelectedPlatforms} />
 
       <div className="flex">
         <Sidebar activeTab={activeTab} onTabChange={setActiveTab} resultsCount={brandResults.length} />
@@ -107,14 +139,14 @@ export default function Dashboard() {
           {activeTab === 'dashboard' && <DashboardView metrics={metrics} activeBrand={activeBrand} onRunTests={runTests} isRunning={isTestRunning} />}
           {activeTab === 'platforms' && <PlatformsView platforms={activeBrand?.selected_platforms || []} metrics={metrics} />}
           {activeTab === 'results' && <ResultsView results={brandResults} />}
-          {activeTab === 'settings' && <SettingsView brand={activeBrand} />}
+          {activeTab === 'settings' && <SettingsView brand={activeBrand} onDeleteBrand={deleteBrand} />}
         </main>
       </div>
     </div>
   )
 }
 
-// Dashboard View
+// Dashboard View - REMOVED API COST DISPLAY
 function DashboardView({ metrics, activeBrand, onRunTests, isRunning }) {
   if (!metrics) {
     return (
@@ -133,13 +165,12 @@ function DashboardView({ metrics, activeBrand, onRunTests, isRunning }) {
 
   return (
     <div className="space-y-6">
-      {/* Metrics Row */}
-      <div className="grid grid-cols-5 gap-4">
+      {/* Metrics Row - REMOVED API COST */}
+      <div className="grid grid-cols-4 gap-4">
         <MetricCard title="Visibility Score" value={`${metrics.visibilityScore}%`} trend={metrics.trend} color="#818cf8" icon="📊" />
         <MetricCard title="Total Tests" value={metrics.totalTests} color="#22d3ee" icon="🧪" />
         <MetricCard title="Top Picks" value={metrics.leaderCount} subtitle={`${((metrics.leaderCount / metrics.totalTests) * 100).toFixed(0)}%`} color="#4ade80" icon="🏆" />
         <MetricCard title="Not Found" value={metrics.notMentionedCount} color="#f87171" icon="👻" />
-        <MetricCard title="API Cost" value={`$${metrics.totalCost?.toFixed(3) || '0'}`} color="#fbbf24" icon="💰" />
       </div>
 
       {/* Charts Row */}
@@ -158,23 +189,23 @@ function DashboardView({ metrics, activeBrand, onRunTests, isRunning }) {
                 </defs>
                 <XAxis dataKey="date" stroke="rgba(255,255,255,0.1)" tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 11 }} tickFormatter={v => v.slice(5)} />
                 <YAxis domain={[0, 100]} stroke="rgba(255,255,255,0.1)" tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 11 }} />
-                <Tooltip contentStyle={{ background: 'rgba(12,12,16,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12 }} />
-                <Area type="monotone" dataKey="score" stroke="#818cf8" strokeWidth={3} fill="url(#scoreGrad)" />
+                <Tooltip contentStyle={{ background: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }} />
+                <Area type="monotone" dataKey="score" stroke="#818cf8" fill="url(#scoreGrad)" strokeWidth={2.5} dot={false} />
               </AreaChart>
             </ResponsiveContainer>
           ) : (
-            <div className="h-52 flex items-center justify-center text-white/40">Run more tests to see trends</div>
+            <div className="h-[220px] flex items-center justify-center text-white/30">Run more tests to see trends</div>
           )}
         </div>
 
-        {/* Funnel Stages */}
+        {/* Funnel */}
         <div className="card p-6">
-          <h3 className="text-lg font-bold mb-5">By Funnel Stage</h3>
+          <h3 className="text-lg font-bold mb-5">Visibility Breakdown</h3>
           {FUNNEL_STAGES.map(stage => (
             <div key={stage.key} className="mb-5">
               <div className="flex justify-between mb-2">
-                <span className="text-white/70 text-sm flex items-center gap-2"><span>{stage.emoji}</span> {stage.label}</span>
-                <span className="font-bold font-mono" style={{ color: stage.color }}>{metrics.byType[stage.key] ?? '—'}%</span>
+                <span className="text-white/60 text-sm">{stage.label}</span>
+                <span className="font-bold text-sm font-mono" style={{ color: stage.color }}>{metrics.byType[stage.key] || 0}%</span>
               </div>
               <div className="h-2 bg-white/5 rounded-full overflow-hidden">
                 <div className="h-full rounded-full" style={{ width: `${metrics.byType[stage.key] || 0}%`, background: `linear-gradient(90deg, ${stage.color}60, ${stage.color})` }} />
@@ -304,8 +335,29 @@ function ResultsView({ results }) {
   )
 }
 
-// Settings View
-function SettingsView({ brand }) {
+// Settings View - WITH WORKING DELETE
+function SettingsView({ brand, onDeleteBrand }) {
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleteInput, setDeleteInput] = useState('')
+  const [isDeleting, setIsDeleting] = useState(false)
+  const navigate = useNavigate()
+
+  const handleDelete = async () => {
+    if (deleteInput !== brand?.name) return
+    
+    setIsDeleting(true)
+    try {
+      await onDeleteBrand(brand.id)
+      setShowDeleteConfirm(false)
+      // Navigate to dashboard, brand store will auto-select another brand
+    } catch (err) {
+      console.error('Delete failed:', err)
+      alert('Failed to delete brand. Please try again.')
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
   return (
     <div className="max-w-2xl space-y-6">
       <div className="card p-6">
@@ -329,9 +381,48 @@ function SettingsView({ brand }) {
         </div>
       </div>
 
-      <div className="card p-6">
-        <h3 className="text-lg font-bold mb-4">Danger Zone</h3>
-        <button className="btn bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20">Delete Brand</button>
+      <div className="card p-6 border-red-500/20">
+        <h3 className="text-lg font-bold mb-2 text-red-400">Danger Zone</h3>
+        <p className="text-white/50 text-sm mb-4">
+          Permanently delete this brand and all associated test results. This action cannot be undone.
+        </p>
+        
+        {!showDeleteConfirm ? (
+          <button 
+            onClick={() => setShowDeleteConfirm(true)}
+            className="btn bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20"
+          >
+            Delete Brand
+          </button>
+        ) : (
+          <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 space-y-4">
+            <p className="text-white/70 text-sm">
+              Type <strong className="text-red-400">{brand?.name}</strong> to confirm deletion:
+            </p>
+            <input
+              type="text"
+              value={deleteInput}
+              onChange={(e) => setDeleteInput(e.target.value)}
+              placeholder="Type brand name to confirm"
+              className="input border-red-500/30 focus:border-red-500"
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={handleDelete}
+                disabled={deleteInput !== brand?.name || isDeleting}
+                className="btn bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isDeleting ? 'Deleting...' : 'Confirm Delete'}
+              </button>
+              <button
+                onClick={() => { setShowDeleteConfirm(false); setDeleteInput('') }}
+                className="btn btn-secondary"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

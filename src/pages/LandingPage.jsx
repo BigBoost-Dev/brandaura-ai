@@ -1,6 +1,7 @@
-import React, { useState } from 'react'
-import { Link } from 'react-router-dom'
+import React, { useState, useEffect } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { AI_PLATFORMS, PRICING_PLANS } from '../lib/constants'
+import { useAuthStore } from '../hooks/useStore'
 
 // Logo Icon Component
 function LogoIcon({ size = 40 }) {
@@ -32,6 +33,8 @@ export { LogoIcon }
 
 export default function LandingPage() {
   const [activeFeature, setActiveFeature] = useState(0)
+  const { user, profile, loading, signOut } = useAuthStore()
+  const navigate = useNavigate()
 
   const features = [
     { icon: '🤖', title: '6 AI Platforms', desc: 'Track visibility across ChatGPT, Claude, Gemini, Perplexity, Llama, and more' },
@@ -57,7 +60,7 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-black text-white overflow-hidden">
-      {/* Navigation */}
+      {/* Navigation - WITH AUTH STATE */}
       <nav className="fixed top-0 left-0 right-0 z-50 px-6 md:px-16 py-5 flex justify-between items-center bg-black/80 backdrop-blur-xl border-b border-white/5">
         <Link to="/" className="flex items-center gap-3">
           <LogoIcon size={40} />
@@ -69,8 +72,48 @@ export default function LandingPage() {
           <a href="#features" className="text-white/70 hover:text-white text-sm font-medium transition">Features</a>
           <a href="#pricing" className="text-white/70 hover:text-white text-sm font-medium transition">Pricing</a>
           <a href="#testimonials" className="text-white/70 hover:text-white text-sm font-medium transition">Testimonials</a>
-          <Link to="/login" className="text-white/70 hover:text-white text-sm font-medium transition">Sign In</Link>
-          <Link to="/signup" className="btn btn-primary">Get Started Free</Link>
+          
+          {/* Auth State Conditional Rendering */}
+          {loading ? (
+            <div className="w-8 h-8 rounded-full bg-white/10 animate-pulse" />
+          ) : user ? (
+            // Logged in - show user menu
+            <div className="flex items-center gap-4">
+              <Link to="/dashboard" className="btn btn-primary">
+                Go to Dashboard
+              </Link>
+              <div className="flex items-center gap-3">
+                <img 
+                  src={user?.user_metadata?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email}`}
+                  alt="" 
+                  className="w-9 h-9 rounded-xl border-2 border-primary-500/50"
+                />
+                <div className="hidden lg:block">
+                  <div className="text-sm font-medium">{profile?.full_name || user?.email?.split('@')[0]}</div>
+                  <div className="text-xs text-white/40 capitalize">{profile?.plan || 'Free'} Plan</div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            // Not logged in - show sign in/up
+            <>
+              <Link to="/login" className="text-white/70 hover:text-white text-sm font-medium transition">Sign In</Link>
+              <Link to="/signup" className="btn btn-primary">Get Started Free</Link>
+            </>
+          )}
+        </div>
+        
+        {/* Mobile menu for logged in users */}
+        <div className="md:hidden flex items-center gap-3">
+          {user ? (
+            <Link to="/dashboard" className="btn btn-primary text-sm px-4 py-2">
+              Dashboard
+            </Link>
+          ) : (
+            <Link to="/signup" className="btn btn-primary text-sm px-4 py-2">
+              Get Started
+            </Link>
+          )}
         </div>
       </nav>
 
@@ -99,11 +142,17 @@ export default function LandingPage() {
           Get alerts when visibility drops. Beat competitors in AI search.
         </p>
 
-        {/* CTA Buttons */}
+        {/* CTA Buttons - WITH AUTH STATE */}
         <div className="flex flex-col sm:flex-row gap-4 mb-16">
-          <Link to="/signup" className="btn btn-primary text-lg px-10 py-5 shadow-lg shadow-primary-500/30">
-            Start Free Trial →
-          </Link>
+          {user ? (
+            <Link to="/dashboard" className="btn btn-primary text-lg px-10 py-5 shadow-lg shadow-primary-500/30">
+              Open Dashboard →
+            </Link>
+          ) : (
+            <Link to="/signup" className="btn btn-primary text-lg px-10 py-5 shadow-lg shadow-primary-500/30">
+              Start Free Trial →
+            </Link>
+          )}
           <button className="btn btn-secondary text-lg px-10 py-5">
             Watch Demo
           </button>
@@ -213,10 +262,10 @@ export default function LandingPage() {
                   ))}
                 </ul>
                 <Link 
-                  to="/signup"
+                  to={user ? "/dashboard" : "/signup"}
                   className={`btn w-full ${plan.popular ? 'btn-primary' : 'btn-secondary'}`}
                 >
-                  Get Started
+                  {user ? 'Go to Dashboard' : 'Get Started'}
                 </Link>
               </div>
             ))}
@@ -256,8 +305,8 @@ export default function LandingPage() {
           <p className="text-white/60 text-lg mb-10">
             Join 500+ brands already tracking their AI visibility. Start free, no credit card required.
           </p>
-          <Link to="/signup" className="btn btn-primary text-lg px-12 py-5 shadow-lg shadow-primary-500/40">
-            Start Your Free Trial →
+          <Link to={user ? "/dashboard" : "/signup"} className="btn btn-primary text-lg px-12 py-5 shadow-lg shadow-primary-500/40">
+            {user ? 'Open Dashboard →' : 'Start Your Free Trial →'}
           </Link>
         </div>
       </section>
@@ -268,6 +317,11 @@ export default function LandingPage() {
           <div className="flex items-center gap-3">
             <LogoIcon size={36} />
             <span className="font-bold">BrandAura<span className="text-primary-400 ml-1">AI</span></span>
+          </div>
+          <div className="flex items-center gap-6 text-white/40 text-sm">
+            <Link to="/support" className="hover:text-white transition">Support</Link>
+            <Link to="/docs" className="hover:text-white transition">Documentation</Link>
+            <a href="mailto:support@brandaura.ai" className="hover:text-white transition">Contact</a>
           </div>
           <div className="text-white/40 text-sm">© 2025 BrandAura AI. All rights reserved.</div>
         </div>
