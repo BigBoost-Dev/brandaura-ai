@@ -27,7 +27,6 @@ export default function Dashboard() {
   const activeBrand = getActiveBrand()
   const brandResults = activeBrand ? getResults(activeBrand.id) : []
 
-  // Initialize selected platforms from brand
   useEffect(() => {
     if (activeBrand?.selected_platforms) {
       setSelectedPlatforms(activeBrand.selected_platforms)
@@ -57,11 +56,6 @@ export default function Dashboard() {
     if (!authLoading && brands.length === 0) setShowSetup(true)
   }, [brands, authLoading])
 
-  // Close sidebar on route change (mobile)
-  useEffect(() => {
-    setSidebarOpen(false)
-  }, [activeTab])
-
   const stopTests = useCallback(() => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort()
@@ -73,7 +67,6 @@ export default function Dashboard() {
     if (isTestRunning || !activeBrand || !user) return
     
     abortControllerRef.current = new AbortController()
-    
     setTestRunning(true)
     addLog({ message: `🚀 Starting tests for ${activeBrand.name}`, type: 'info' })
 
@@ -158,8 +151,7 @@ export default function Dashboard() {
           onClose={() => setSidebarOpen(false)}
         />
         
-        {/* Main Content - Responsive padding */}
-        <main className="flex-1 p-4 sm:p-6 lg:ml-60 min-h-[calc(100vh-65px)]">
+        <main className="flex-1 p-4 md:p-6 lg:ml-60">
           {activeTab === 'dashboard' && <DashboardView metrics={metrics} activeBrand={activeBrand} onRunTests={runTests} isRunning={isTestRunning} />}
           {activeTab === 'platforms' && <PlatformsView platforms={activeBrand?.selected_platforms || []} metrics={metrics} />}
           {activeTab === 'results' && <ResultsView results={brandResults} />}
@@ -170,15 +162,14 @@ export default function Dashboard() {
   )
 }
 
-// Dashboard View - RESPONSIVE
 function DashboardView({ metrics, activeBrand, onRunTests, isRunning }) {
   if (!metrics) {
     return (
-      <div className="card p-8 sm:p-12 lg:p-20 text-center bg-gradient-to-br from-primary-500/10 to-purple-500/5 border-primary-500/20">
-        <div className="text-5xl sm:text-7xl mb-4 sm:mb-6">🚀</div>
-        <h3 className="text-xl sm:text-2xl lg:text-3xl font-extrabold mb-2 sm:mb-3">Ready to Track {activeBrand?.name}</h3>
-        <p className="text-white/50 mb-6 sm:mb-8 max-w-md mx-auto text-sm sm:text-base">Click "Run Tests" to query AI platforms and analyze how they respond to questions about your brand.</p>
-        <button onClick={onRunTests} disabled={isRunning} className="btn btn-primary text-base sm:text-lg px-6 sm:px-10 py-3 sm:py-4">
+      <div className="card p-8 md:p-20 text-center bg-gradient-to-br from-primary-500/10 to-purple-500/5 border-primary-500/20">
+        <div className="text-6xl md:text-7xl mb-6">🚀</div>
+        <h3 className="text-2xl md:text-3xl font-extrabold mb-3">Ready to Track {activeBrand?.name}</h3>
+        <p className="text-white/50 mb-8 max-w-md mx-auto">Click "Run Tests" to query AI platforms and analyze how they respond to questions about your brand.</p>
+        <button onClick={onRunTests} disabled={isRunning} className="btn btn-primary text-lg px-10 py-4">
           {isRunning ? 'Running...' : 'Run First Test Batch →'}
         </button>
       </div>
@@ -188,22 +179,21 @@ function DashboardView({ metrics, activeBrand, onRunTests, isRunning }) {
   const benchmark = INDUSTRY_BENCHMARKS[activeBrand?.industry || 'SaaS'] || INDUSTRY_BENCHMARKS.SaaS
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      {/* Metrics Row - Responsive Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+    <div className="space-y-6">
+      {/* Metrics Row */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <MetricCard title="Visibility Score" value={`${metrics.visibilityScore}%`} trend={metrics.trend} color="#818cf8" icon="📊" />
         <MetricCard title="Total Tests" value={metrics.totalTests} color="#22d3ee" icon="🧪" />
         <MetricCard title="Top Picks" value={metrics.leaderCount} subtitle={`${((metrics.leaderCount / metrics.totalTests) * 100).toFixed(0)}%`} color="#4ade80" icon="🏆" />
         <MetricCard title="Not Found" value={metrics.notMentionedCount} color="#f87171" icon="👻" />
       </div>
 
-      {/* Charts Row - Responsive */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-        {/* Timeline */}
-        <div className="lg:col-span-2 card p-4 sm:p-6">
-          <h3 className="text-base sm:text-lg font-bold mb-4 sm:mb-5">Visibility Over Time</h3>
+      {/* Charts Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 card p-6">
+          <h3 className="text-lg font-bold mb-5">Visibility Over Time</h3>
           {metrics.timeline.length > 1 ? (
-            <ResponsiveContainer width="100%" height={180} className="sm:h-[220px]">
+            <ResponsiveContainer width="100%" height={220}>
               <AreaChart data={metrics.timeline}>
                 <defs>
                   <linearGradient id="scoreGrad" x1="0" y1="0" x2="0" y2="1">
@@ -211,27 +201,26 @@ function DashboardView({ metrics, activeBrand, onRunTests, isRunning }) {
                     <stop offset="100%" stopColor="#818cf8" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <XAxis dataKey="date" stroke="rgba(255,255,255,0.1)" tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 10 }} tickFormatter={v => v.slice(5)} />
-                <YAxis domain={[0, 100]} stroke="rgba(255,255,255,0.1)" tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 10 }} width={30} />
-                <Tooltip contentStyle={{ background: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px' }} />
-                <Area type="monotone" dataKey="score" stroke="#818cf8" fill="url(#scoreGrad)" strokeWidth={2} dot={false} />
+                <XAxis dataKey="date" stroke="rgba(255,255,255,0.1)" tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 11 }} tickFormatter={v => v.slice(5)} />
+                <YAxis domain={[0, 100]} stroke="rgba(255,255,255,0.1)" tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 11 }} />
+                <Tooltip contentStyle={{ background: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }} />
+                <Area type="monotone" dataKey="score" stroke="#818cf8" fill="url(#scoreGrad)" strokeWidth={2.5} dot={false} />
               </AreaChart>
             </ResponsiveContainer>
           ) : (
-            <div className="h-[180px] sm:h-[220px] flex items-center justify-center text-white/30 text-sm">Run more tests to see trends</div>
+            <div className="h-[220px] flex items-center justify-center text-white/30">Run more tests to see trends</div>
           )}
         </div>
 
-        {/* Funnel */}
-        <div className="card p-4 sm:p-6">
-          <h3 className="text-base sm:text-lg font-bold mb-4 sm:mb-5">Visibility Breakdown</h3>
+        <div className="card p-6">
+          <h3 className="text-lg font-bold mb-5">Visibility Breakdown</h3>
           {FUNNEL_STAGES.map(stage => (
-            <div key={stage.key} className="mb-4 sm:mb-5">
-              <div className="flex justify-between mb-1.5 sm:mb-2">
-                <span className="text-white/60 text-xs sm:text-sm">{stage.label}</span>
-                <span className="font-bold text-xs sm:text-sm font-mono" style={{ color: stage.color }}>{metrics.byType[stage.key] || 0}%</span>
+            <div key={stage.key} className="mb-5">
+              <div className="flex justify-between mb-2">
+                <span className="text-white/60 text-sm">{stage.label}</span>
+                <span className="font-bold text-sm font-mono" style={{ color: stage.color }}>{metrics.byType[stage.key] || 0}%</span>
               </div>
-              <div className="h-1.5 sm:h-2 bg-white/5 rounded-full overflow-hidden">
+              <div className="h-2 bg-white/5 rounded-full overflow-hidden">
                 <div className="h-full rounded-full" style={{ width: `${metrics.byType[stage.key] || 0}%`, background: `linear-gradient(90deg, ${stage.color}60, ${stage.color})` }} />
               </div>
             </div>
@@ -239,30 +228,29 @@ function DashboardView({ metrics, activeBrand, onRunTests, isRunning }) {
         </div>
       </div>
 
-      {/* Bottom Row - Responsive */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-        {/* Share of Voice */}
-        <div className="card p-4 sm:p-6">
-          <h3 className="text-base sm:text-lg font-bold mb-4 sm:mb-5">Share of Voice vs Competitors</h3>
-          <div className="space-y-2 sm:space-y-3">
-            <div className="p-3 sm:p-5 rounded-xl sm:rounded-2xl bg-gradient-to-r from-primary-500/15 to-primary-500/5 border-2 border-primary-500/40 flex justify-between items-center">
-              <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-                <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-primary-400 flex-shrink-0" />
-                <span className="font-bold text-sm sm:text-base truncate">{activeBrand?.name}</span>
-                <span className="text-xs text-white/30 bg-white/10 px-1.5 sm:px-2 py-0.5 rounded hidden sm:inline">You</span>
+      {/* Bottom Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="card p-6">
+          <h3 className="text-lg font-bold mb-5">Share of Voice vs Competitors</h3>
+          <div className="space-y-3">
+            <div className="p-5 rounded-2xl bg-gradient-to-r from-primary-500/15 to-primary-500/5 border-2 border-primary-500/40 flex justify-between items-center">
+              <div className="flex items-center gap-3">
+                <div className="w-3 h-3 rounded-full bg-primary-400" />
+                <span className="font-bold">{activeBrand?.name}</span>
+                <span className="text-xs text-white/30 bg-white/10 px-2 py-0.5 rounded">You</span>
               </div>
-              <span className="text-2xl sm:text-3xl font-extrabold font-mono text-primary-400 flex-shrink-0">{metrics.visibilityScore}%</span>
+              <span className="text-3xl font-extrabold font-mono text-primary-400">{metrics.visibilityScore}%</span>
             </div>
             {Object.entries(metrics.competitorScores).map(([name, score]) => {
               const diff = metrics.visibilityScore - score
               return (
-                <div key={name} className="p-3 sm:p-4 rounded-xl bg-white/[0.02] border border-white/5 flex justify-between items-center">
-                  <span className="text-white/70 text-sm sm:text-base truncate mr-2">{name}</span>
-                  <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-                    <span className={`text-xs sm:text-sm font-semibold ${diff > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                <div key={name} className="p-4 rounded-xl bg-white/[0.02] border border-white/5 flex justify-between items-center">
+                  <span className="text-white/70">{name}</span>
+                  <div className="flex items-center gap-3">
+                    <span className={`text-sm font-semibold ${diff > 0 ? 'text-green-400' : 'text-red-400'}`}>
                       {diff > 0 ? '+' : ''}{diff}
                     </span>
-                    <span className={`text-xl sm:text-2xl font-extrabold font-mono ${diff > 0 ? 'text-green-400' : 'text-red-400'}`}>{score}%</span>
+                    <span className={`text-2xl font-extrabold font-mono ${diff > 0 ? 'text-green-400' : 'text-red-400'}`}>{score}%</span>
                   </div>
                 </div>
               )
@@ -270,27 +258,26 @@ function DashboardView({ metrics, activeBrand, onRunTests, isRunning }) {
           </div>
         </div>
 
-        {/* Benchmark */}
-        <div className="card p-4 sm:p-6">
-          <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
-            <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center text-lg sm:text-xl">📊</div>
+        <div className="card p-6">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center text-xl">📊</div>
             <div>
-              <h3 className="text-base sm:text-lg font-bold">Industry Benchmark</h3>
-              <p className="text-white/50 text-xs sm:text-sm">{activeBrand?.industry || 'SaaS'} Industry</p>
+              <h3 className="text-lg font-bold">Industry Benchmark</h3>
+              <p className="text-white/50 text-sm">{activeBrand?.industry || 'SaaS'} Industry</p>
             </div>
           </div>
           
-          <div className={`p-3 sm:p-4 rounded-xl sm:rounded-2xl mb-4 sm:mb-6 flex items-center gap-3 sm:gap-4 ${
+          <div className={`p-4 rounded-2xl mb-6 flex items-center gap-4 ${
             metrics.visibilityScore >= benchmark.topPerformer ? 'bg-green-500/10 border border-green-500/20' :
             metrics.visibilityScore >= benchmark.avgVisibility ? 'bg-cyan-500/10 border border-cyan-500/20' :
             'bg-red-500/10 border border-red-500/20'
           }`}>
-            <span className="text-2xl sm:text-3xl">{metrics.visibilityScore >= benchmark.topPerformer ? '🏆' : metrics.visibilityScore >= benchmark.avgVisibility ? '📈' : '📉'}</span>
+            <span className="text-3xl">{metrics.visibilityScore >= benchmark.topPerformer ? '🏆' : metrics.visibilityScore >= benchmark.avgVisibility ? '📈' : '📉'}</span>
             <div>
-              <div className="font-bold text-sm sm:text-base" style={{ color: metrics.visibilityScore >= benchmark.topPerformer ? '#4ade80' : metrics.visibilityScore >= benchmark.avgVisibility ? '#22d3ee' : '#f87171' }}>
+              <div className="font-bold" style={{ color: metrics.visibilityScore >= benchmark.topPerformer ? '#4ade80' : metrics.visibilityScore >= benchmark.avgVisibility ? '#22d3ee' : '#f87171' }}>
                 {metrics.visibilityScore >= benchmark.topPerformer ? 'Top Performer' : metrics.visibilityScore >= benchmark.avgVisibility ? 'Above Average' : 'Below Average'}
               </div>
-              <div className="text-white/50 text-xs sm:text-sm">Your score: {metrics.visibilityScore}% vs avg: {benchmark.avgVisibility}%</div>
+              <div className="text-white/50 text-sm">Your score: {metrics.visibilityScore}% vs avg: {benchmark.avgVisibility}%</div>
             </div>
           </div>
 
@@ -298,12 +285,12 @@ function DashboardView({ metrics, activeBrand, onRunTests, isRunning }) {
             { label: 'Industry Avg', value: benchmark.avgVisibility, color: 'rgba(255,255,255,0.3)' },
             { label: 'Top Performer', value: benchmark.topPerformer, color: '#4ade80' }
           ].map(item => (
-            <div key={item.label} className="mb-3 sm:mb-4">
-              <div className="flex justify-between mb-1.5 sm:mb-2">
-                <span className="text-white/60 text-xs sm:text-sm">{item.label}</span>
-                <span className="font-bold font-mono text-xs sm:text-sm" style={{ color: item.color }}>{item.value}%</span>
+            <div key={item.label} className="mb-4">
+              <div className="flex justify-between mb-2">
+                <span className="text-white/60 text-sm">{item.label}</span>
+                <span className="font-bold font-mono" style={{ color: item.color }}>{item.value}%</span>
               </div>
-              <div className="h-1.5 sm:h-2 bg-white/5 rounded-full overflow-hidden">
+              <div className="h-2 bg-white/5 rounded-full overflow-hidden">
                 <div className="h-full rounded-full" style={{ width: `${item.value}%`, background: item.color }} />
               </div>
             </div>
@@ -314,10 +301,9 @@ function DashboardView({ metrics, activeBrand, onRunTests, isRunning }) {
   )
 }
 
-// Platforms View - Responsive
 function PlatformsView({ platforms, metrics }) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
       {platforms.map(pid => {
         const platform = AI_PLATFORMS[pid]
         const stats = metrics?.byPlatform?.[pid]
@@ -327,31 +313,30 @@ function PlatformsView({ platforms, metrics }) {
   )
 }
 
-// Results View - Responsive
 function ResultsView({ results }) {
   if (results.length === 0) {
-    return <div className="text-center py-12 sm:py-20 text-white/40 text-sm sm:text-base">No results yet. Run tests to see data.</div>
+    return <div className="text-center py-20 text-white/40">No results yet. Run tests to see data.</div>
   }
 
   return (
-    <div className="space-y-2 sm:space-y-3">
+    <div className="space-y-3">
       {[...results].reverse().slice(0, 100).map(result => {
         const platform = AI_PLATFORMS[result.platform_id]
         const mention = MENTION_TYPES[result.brand_mention]
         return (
-          <div key={result.id} className="card p-3 sm:p-5">
-            <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3 flex-wrap">
-              <span className="badge text-xs sm:text-sm" style={{ backgroundColor: `${platform?.color}20`, color: platform?.color, borderColor: `${platform?.color}40` }}>
+          <div key={result.id} className="card p-5">
+            <div className="flex items-center gap-3 mb-3 flex-wrap">
+              <span className="badge" style={{ backgroundColor: `${platform?.color}20`, color: platform?.color, borderColor: `${platform?.color}40` }}>
                 {platform?.icon} {platform?.name}
               </span>
-              <span className="badge text-xs sm:text-sm" style={{ backgroundColor: mention?.bgColor, color: mention?.color }}>
+              <span className="badge" style={{ backgroundColor: mention?.bgColor, color: mention?.color }}>
                 {mention?.emoji} {mention?.label}
               </span>
-              <span className="badge bg-white/5 text-white/50 text-xs">{result.query_type}</span>
-              {result.brand_position && <span className="text-green-400 font-bold text-sm">#{result.brand_position}</span>}
+              <span className="badge bg-white/5 text-white/50">{result.query_type}</span>
+              {result.brand_position && <span className="text-green-400 font-bold">#{result.brand_position}</span>}
             </div>
-            <p className="text-white/80 text-sm sm:text-base">"{result.query}"</p>
-            {result.snippet && <p className="text-white/40 text-xs sm:text-sm mt-2 line-clamp-2">{result.snippet}</p>}
+            <p className="text-white/80">"{result.query}"</p>
+            {result.snippet && <p className="text-white/40 text-sm mt-2 line-clamp-2">{result.snippet}</p>}
           </div>
         )
       })}
@@ -359,16 +344,13 @@ function ResultsView({ results }) {
   )
 }
 
-// Settings View - Responsive
 function SettingsView({ brand, onDeleteBrand }) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleteInput, setDeleteInput] = useState('')
   const [isDeleting, setIsDeleting] = useState(false)
-  const navigate = useNavigate()
 
   const handleDelete = async () => {
     if (deleteInput !== brand?.name) return
-    
     setIsDeleting(true)
     try {
       await onDeleteBrand(brand.id)
@@ -382,67 +364,45 @@ function SettingsView({ brand, onDeleteBrand }) {
   }
 
   return (
-    <div className="max-w-2xl space-y-4 sm:space-y-6">
-      <div className="card p-4 sm:p-6">
-        <h3 className="text-base sm:text-lg font-bold mb-3 sm:mb-4">Brand Settings</h3>
-        <div className="space-y-3 sm:space-y-4">
+    <div className="max-w-2xl space-y-6">
+      <div className="card p-6">
+        <h3 className="text-lg font-bold mb-4">Brand Settings</h3>
+        <div className="space-y-4">
           <div>
-            <label className="block text-white/60 text-xs sm:text-sm mb-1.5 sm:mb-2">Brand Name</label>
-            <input type="text" defaultValue={brand?.name} className="input text-sm sm:text-base" />
+            <label className="block text-white/60 text-sm mb-2">Brand Name</label>
+            <input type="text" defaultValue={brand?.name} className="input" />
           </div>
           <div>
-            <label className="block text-white/60 text-xs sm:text-sm mb-1.5 sm:mb-2">Category</label>
-            <input type="text" defaultValue={brand?.category} className="input text-sm sm:text-base" />
+            <label className="block text-white/60 text-sm mb-2">Category</label>
+            <input type="text" defaultValue={brand?.category} className="input" />
           </div>
           <div>
-            <label className="block text-white/60 text-xs sm:text-sm mb-1.5 sm:mb-2">Industry</label>
-            <select defaultValue={brand?.industry} className="input text-sm sm:text-base">
+            <label className="block text-white/60 text-sm mb-2">Industry</label>
+            <select defaultValue={brand?.industry} className="input">
               {Object.keys(INDUSTRY_BENCHMARKS).map(ind => <option key={ind} value={ind}>{ind}</option>)}
             </select>
           </div>
-          <button className="btn btn-primary text-sm sm:text-base">Save Changes</button>
+          <button className="btn btn-primary">Save Changes</button>
         </div>
       </div>
 
-      <div className="card p-4 sm:p-6 border-red-500/20">
-        <h3 className="text-base sm:text-lg font-bold mb-1.5 sm:mb-2 text-red-400">Danger Zone</h3>
-        <p className="text-white/50 text-xs sm:text-sm mb-3 sm:mb-4">
-          Permanently delete this brand and all associated test results. This action cannot be undone.
-        </p>
+      <div className="card p-6 border-red-500/20">
+        <h3 className="text-lg font-bold mb-2 text-red-400">Danger Zone</h3>
+        <p className="text-white/50 text-sm mb-4">Permanently delete this brand and all test results.</p>
         
         {!showDeleteConfirm ? (
-          <button 
-            onClick={() => setShowDeleteConfirm(true)}
-            className="btn bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20 text-sm sm:text-base"
-          >
+          <button onClick={() => setShowDeleteConfirm(true)} className="btn bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20">
             Delete Brand
           </button>
         ) : (
-          <div className="p-3 sm:p-4 rounded-xl bg-red-500/10 border border-red-500/30 space-y-3 sm:space-y-4">
-            <p className="text-white/70 text-xs sm:text-sm">
-              Type <strong className="text-red-400">{brand?.name}</strong> to confirm deletion:
-            </p>
-            <input
-              type="text"
-              value={deleteInput}
-              onChange={(e) => setDeleteInput(e.target.value)}
-              placeholder="Type brand name to confirm"
-              className="input border-red-500/30 focus:border-red-500 text-sm sm:text-base"
-            />
-            <div className="flex gap-2 sm:gap-3 flex-wrap">
-              <button
-                onClick={handleDelete}
-                disabled={deleteInput !== brand?.name || isDeleting}
-                className="btn bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
-              >
+          <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 space-y-4">
+            <p className="text-white/70 text-sm">Type <strong className="text-red-400">{brand?.name}</strong> to confirm:</p>
+            <input type="text" value={deleteInput} onChange={(e) => setDeleteInput(e.target.value)} placeholder="Type brand name" className="input border-red-500/30" />
+            <div className="flex gap-3">
+              <button onClick={handleDelete} disabled={deleteInput !== brand?.name || isDeleting} className="btn bg-red-500 text-white hover:bg-red-600 disabled:opacity-50">
                 {isDeleting ? 'Deleting...' : 'Confirm Delete'}
               </button>
-              <button
-                onClick={() => { setShowDeleteConfirm(false); setDeleteInput('') }}
-                className="btn btn-secondary text-sm sm:text-base"
-              >
-                Cancel
-              </button>
+              <button onClick={() => { setShowDeleteConfirm(false); setDeleteInput('') }} className="btn btn-secondary">Cancel</button>
             </div>
           </div>
         )}

@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import React, { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { AI_PLATFORMS, PRICING_PLANS } from '../lib/constants'
 import { useAuthStore } from '../hooks/useStore'
 
-// Logo Icon Component
 function LogoIcon({ size = 40 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 100 100" fill="none">
@@ -33,8 +32,7 @@ export { LogoIcon }
 
 export default function LandingPage() {
   const [activeFeature, setActiveFeature] = useState(0)
-  const { user, profile, loading, signOut } = useAuthStore()
-  const navigate = useNavigate()
+  const { user, profile, loading } = useAuthStore()
 
   const features = [
     { icon: '🤖', title: '6 AI Platforms', desc: 'Track visibility across ChatGPT, Claude, Gemini, Perplexity, Llama, and more' },
@@ -60,7 +58,7 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-black text-white overflow-hidden">
-      {/* Navigation - WITH AUTH STATE */}
+      {/* Navigation */}
       <nav className="fixed top-0 left-0 right-0 z-50 px-6 md:px-16 py-5 flex justify-between items-center bg-black/80 backdrop-blur-xl border-b border-white/5">
         <Link to="/" className="flex items-center gap-3">
           <LogoIcon size={40} />
@@ -73,29 +71,14 @@ export default function LandingPage() {
           <a href="#pricing" className="text-white/70 hover:text-white text-sm font-medium transition">Pricing</a>
           <a href="#testimonials" className="text-white/70 hover:text-white text-sm font-medium transition">Testimonials</a>
           
-          {/* Auth State Conditional Rendering */}
           {loading ? (
-            <div className="w-8 h-8 rounded-full bg-white/10 animate-pulse" />
+            <div className="w-20 h-10 bg-white/10 rounded-xl animate-pulse" />
           ) : user ? (
-            // Logged in - show user menu
             <div className="flex items-center gap-4">
-              <Link to="/dashboard" className="btn btn-primary">
-                Go to Dashboard
-              </Link>
-              <div className="flex items-center gap-3">
-                <img 
-                  src={user?.user_metadata?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email}`}
-                  alt="" 
-                  className="w-9 h-9 rounded-xl border-2 border-primary-500/50"
-                />
-                <div className="hidden lg:block">
-                  <div className="text-sm font-medium">{profile?.full_name || user?.email?.split('@')[0]}</div>
-                  <div className="text-xs text-white/40 capitalize">{profile?.plan || 'Free'} Plan</div>
-                </div>
-              </div>
+              <Link to="/dashboard" className="btn btn-primary">Dashboard</Link>
+              <img src={user?.user_metadata?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email}`} alt="" className="w-9 h-9 rounded-xl border-2 border-primary-500/50" />
             </div>
           ) : (
-            // Not logged in - show sign in/up
             <>
               <Link to="/login" className="text-white/70 hover:text-white text-sm font-medium transition">Sign In</Link>
               <Link to="/signup" className="btn btn-primary">Get Started Free</Link>
@@ -103,81 +86,54 @@ export default function LandingPage() {
           )}
         </div>
         
-        {/* Mobile menu for logged in users */}
-        <div className="md:hidden flex items-center gap-3">
+        {/* Mobile */}
+        <div className="md:hidden">
           {user ? (
-            <Link to="/dashboard" className="btn btn-primary text-sm px-4 py-2">
-              Dashboard
-            </Link>
+            <Link to="/dashboard" className="btn btn-primary text-sm px-4 py-2">Dashboard</Link>
           ) : (
-            <Link to="/signup" className="btn btn-primary text-sm px-4 py-2">
-              Get Started
-            </Link>
+            <Link to="/signup" className="btn btn-primary text-sm px-4 py-2">Get Started</Link>
           )}
         </div>
       </nav>
 
       {/* Hero Section */}
       <section className="min-h-screen flex flex-col items-center justify-center px-6 pt-32 pb-20 relative text-center">
-        {/* Background Effects */}
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary-500/10 rounded-full blur-[100px] pointer-events-none" />
         <div className="absolute top-1/3 right-1/4 w-72 h-72 bg-purple-500/10 rounded-full blur-[100px] pointer-events-none" />
 
-        {/* Badge */}
         <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 mb-8 text-sm text-white/70">
           <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
           Now tracking 6 major AI platforms
         </div>
 
-        {/* Headline */}
         <h1 className="text-5xl md:text-7xl lg:text-8xl font-black leading-[1.05] max-w-4xl mb-6 tracking-tight">
-          Track Your Brand's
-          <br />
+          Track Your Brand's<br />
           <span className="gradient-text">AI Visibility</span>
         </h1>
 
-        {/* Subheadline */}
         <p className="text-lg md:text-xl text-white/60 max-w-xl mb-12 leading-relaxed">
           Monitor how ChatGPT, Claude, Gemini, and Perplexity see your brand. 
           Get alerts when visibility drops. Beat competitors in AI search.
         </p>
 
-        {/* CTA Buttons - WITH AUTH STATE */}
         <div className="flex flex-col sm:flex-row gap-4 mb-16">
-          {user ? (
-            <Link to="/dashboard" className="btn btn-primary text-lg px-10 py-5 shadow-lg shadow-primary-500/30">
-              Open Dashboard →
-            </Link>
-          ) : (
-            <Link to="/signup" className="btn btn-primary text-lg px-10 py-5 shadow-lg shadow-primary-500/30">
-              Start Free Trial →
-            </Link>
-          )}
-          <button className="btn btn-secondary text-lg px-10 py-5">
-            Watch Demo
-          </button>
+          <Link to={user ? "/dashboard" : "/signup"} className="btn btn-primary text-lg px-10 py-5 shadow-lg shadow-primary-500/30">
+            {user ? 'Open Dashboard →' : 'Start Free Trial →'}
+          </Link>
+          <button className="btn btn-secondary text-lg px-10 py-5">Watch Demo</button>
         </div>
 
-        {/* Platform Icons */}
         <div className="flex gap-4">
           {Object.values(AI_PLATFORMS).slice(0, 6).map((p, i) => (
-            <div 
-              key={i}
-              className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl border animate-float"
-              style={{ 
-                backgroundColor: `${p.color}15`, 
-                borderColor: `${p.color}30`,
-                color: p.color,
-                animationDelay: `${i * 0.2}s`
-              }}
-            >
+            <div key={i} className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl border animate-float"
+              style={{ backgroundColor: `${p.color}15`, borderColor: `${p.color}30`, color: p.color, animationDelay: `${i * 0.2}s` }}>
               {p.icon}
             </div>
           ))}
         </div>
       </section>
 
-      {/* Stats Section */}
+      {/* Stats */}
       <section className="py-20 px-6 bg-white/[0.02] border-y border-white/5">
         <div className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8">
           {stats.map((stat, i) => (
@@ -189,29 +145,16 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Features Section */}
+      {/* Features */}
       <section id="features" className="py-24 px-6">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-20">
-            <h2 className="text-4xl md:text-5xl font-extrabold mb-5 tracking-tight">
-              Everything You Need to Dominate AI Search
-            </h2>
-            <p className="text-white/50 text-lg max-w-xl mx-auto">
-              The most comprehensive AI visibility tracking platform for brands serious about their AI presence
-            </p>
+            <h2 className="text-4xl md:text-5xl font-extrabold mb-5 tracking-tight">Everything You Need to Dominate AI Search</h2>
+            <p className="text-white/50 text-lg max-w-xl mx-auto">The most comprehensive AI visibility tracking platform for brands serious about their AI presence</p>
           </div>
-
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {features.map((feature, i) => (
-              <div 
-                key={i}
-                className={`p-9 rounded-3xl cursor-pointer transition-all duration-300 ${
-                  activeFeature === i 
-                    ? 'bg-gradient-to-br from-primary-500/15 to-purple-500/10 border-primary-500/30' 
-                    : 'bg-white/[0.02] border-white/5 hover:border-white/10'
-                } border`}
-                onMouseEnter={() => setActiveFeature(i)}
-              >
+              <div key={i} className={`p-9 rounded-3xl cursor-pointer transition-all duration-300 border ${activeFeature === i ? 'bg-gradient-to-br from-primary-500/15 to-purple-500/10 border-primary-500/30' : 'bg-white/[0.02] border-white/5 hover:border-white/10'}`} onMouseEnter={() => setActiveFeature(i)}>
                 <div className="text-5xl mb-6">{feature.icon}</div>
                 <h3 className="text-xl font-bold mb-3">{feature.title}</h3>
                 <p className="text-white/50 leading-relaxed">{feature.desc}</p>
@@ -221,29 +164,17 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Pricing Section */}
+      {/* Pricing */}
       <section id="pricing" className="py-24 px-6 bg-white/[0.02]">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-20">
             <h2 className="text-4xl md:text-5xl font-extrabold mb-5 tracking-tight">Simple, Transparent Pricing</h2>
             <p className="text-white/50 text-lg">Start free, upgrade when you need more</p>
           </div>
-
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             {Object.entries(PRICING_PLANS).map(([key, plan]) => (
-              <div 
-                key={key}
-                className={`p-8 rounded-3xl relative ${
-                  plan.popular 
-                    ? 'bg-gradient-to-br from-primary-500/20 to-purple-500/10 border-2 border-primary-500/50' 
-                    : 'bg-white/[0.02] border border-white/5'
-                }`}
-              >
-                {plan.popular && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded-full gradient-primary text-xs font-semibold">
-                    Most Popular
-                  </div>
-                )}
+              <div key={key} className={`p-8 rounded-3xl relative ${plan.popular ? 'bg-gradient-to-br from-primary-500/20 to-purple-500/10 border-2 border-primary-500/50' : 'bg-white/[0.02] border border-white/5'}`}>
+                {plan.popular && <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded-full gradient-primary text-xs font-semibold">Most Popular</div>}
                 <div className="text-lg font-semibold mb-2 text-white/70">{plan.name}</div>
                 <div className="text-5xl font-black mb-6 font-mono">
                   {typeof plan.price === 'number' ? `$${plan.price}` : plan.price}
@@ -255,16 +186,9 @@ export default function LandingPage() {
                   <div>{plan.platforms} platforms</div>
                 </div>
                 <ul className="mb-8 space-y-3">
-                  {plan.features.map((f, j) => (
-                    <li key={j} className="text-sm text-white/60 flex items-start gap-3">
-                      <span className="text-green-400">✓</span> {f}
-                    </li>
-                  ))}
+                  {plan.features.map((f, j) => <li key={j} className="text-sm text-white/60 flex items-start gap-3"><span className="text-green-400">✓</span> {f}</li>)}
                 </ul>
-                <Link 
-                  to={user ? "/dashboard" : "/signup"}
-                  className={`btn w-full ${plan.popular ? 'btn-primary' : 'btn-secondary'}`}
-                >
+                <Link to={user ? "/dashboard" : "/signup"} className={`btn w-full ${plan.popular ? 'btn-primary' : 'btn-secondary'}`}>
                   {user ? 'Go to Dashboard' : 'Get Started'}
                 </Link>
               </div>
@@ -296,15 +220,11 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* CTA Section */}
+      {/* CTA */}
       <section className="py-24 px-6">
         <div className="max-w-3xl mx-auto p-16 rounded-[2rem] bg-gradient-to-br from-primary-500/20 to-purple-500/10 border border-primary-500/30 text-center">
-          <h2 className="text-4xl md:text-5xl font-extrabold mb-5 tracking-tight">
-            Ready to Dominate AI Search?
-          </h2>
-          <p className="text-white/60 text-lg mb-10">
-            Join 500+ brands already tracking their AI visibility. Start free, no credit card required.
-          </p>
+          <h2 className="text-4xl md:text-5xl font-extrabold mb-5 tracking-tight">Ready to Dominate AI Search?</h2>
+          <p className="text-white/60 text-lg mb-10">Join 500+ brands already tracking their AI visibility. Start free, no credit card required.</p>
           <Link to={user ? "/dashboard" : "/signup"} className="btn btn-primary text-lg px-12 py-5 shadow-lg shadow-primary-500/40">
             {user ? 'Open Dashboard →' : 'Start Your Free Trial →'}
           </Link>
@@ -317,11 +237,6 @@ export default function LandingPage() {
           <div className="flex items-center gap-3">
             <LogoIcon size={36} />
             <span className="font-bold">BrandAura<span className="text-primary-400 ml-1">AI</span></span>
-          </div>
-          <div className="flex items-center gap-6 text-white/40 text-sm">
-            <Link to="/support" className="hover:text-white transition">Support</Link>
-            <Link to="/docs" className="hover:text-white transition">Documentation</Link>
-            <a href="mailto:support@brandaura.ai" className="hover:text-white transition">Contact</a>
           </div>
           <div className="text-white/40 text-sm">© 2025 BrandAura AI. All rights reserved.</div>
         </div>
