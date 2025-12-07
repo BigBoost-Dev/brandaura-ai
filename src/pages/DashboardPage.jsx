@@ -59,9 +59,12 @@ export default function Dashboard() {
   const stopTests = useCallback(() => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort()
+      abortControllerRef.current = null
+      setTestRunning(false)
+      setTestProgress({ current: 0, total: 0, platform: '', query: '' })
       addLog({ message: '⏹ Tests stopped by user', type: 'warning' })
     }
-  }, [addLog])
+  }, [addLog, setTestRunning, setTestProgress])
 
   const runTests = useCallback(async () => {
     if (isTestRunning || !activeBrand || !user) return
@@ -78,6 +81,7 @@ export default function Dashboard() {
     const batchId = Date.now().toString()
 
     for (let i = 0; i < queries.length; i++) {
+      // Check abort immediately
       if (abortControllerRef.current?.signal.aborted) {
         addLog({ message: '⏹ Tests cancelled', type: 'warning' })
         break
@@ -89,6 +93,13 @@ export default function Dashboard() {
 
       try {
         const { success, response, cost, error } = await queryAI(platform.model, query)
+        
+        // Check abort after API call
+        if (abortControllerRef.current?.signal.aborted) {
+          addLog({ message: '⏹ Tests cancelled', type: 'warning' })
+          break
+        }
+        
         if (success && response) {
           const analysis = analyzeResponse(response, activeBrand.name, activeBrand.competitors || [])
           newResults.push({
@@ -106,7 +117,12 @@ export default function Dashboard() {
         if (err.name === 'AbortError') break
         addLog({ message: `❌ ${err.message}`, type: 'error' }) 
       }
-      await new Promise(r => setTimeout(r, 1100))
+      
+      // Short delay with abort check - use smaller chunks so we can stop faster
+      for (let j = 0; j < 11; j++) {
+        if (abortControllerRef.current?.signal.aborted) break
+        await new Promise(r => setTimeout(r, 100))
+      }
     }
 
     if (newResults.length > 0) {

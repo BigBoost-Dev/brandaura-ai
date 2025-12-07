@@ -51,7 +51,7 @@ function PlatformSelector({ selectedPlatforms, setSelectedPlatforms, onClose }) 
   }
 
   return (
-    <div ref={dropdownRef} className="absolute top-full right-0 mt-2 w-80 bg-dark-300 border border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden">
+    <div ref={dropdownRef} className="fixed md:absolute left-4 right-4 md:left-auto md:right-0 top-20 md:top-full md:mt-2 md:w-80 bg-dark-300 border border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden">
       <div className="p-4 border-b border-white/10">
         <div className="flex justify-between items-center mb-2">
           <h3 className="font-bold text-white">Select AI Platforms</h3>
@@ -149,11 +149,11 @@ export default function Header({
         </div>
 
         {/* Right */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           {isRunning && (
-            <div className="flex items-center gap-2 px-2 py-1 rounded-lg bg-primary-500/10 border border-primary-500/30">
+            <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-primary-500/10 border border-primary-500/30">
               <div className="w-2 h-2 rounded-full bg-primary-400 animate-pulse" />
-              <span className="text-primary-400 text-sm font-semibold">{progress.current}/{progress.total}</span>
+              <span className="text-primary-400 text-sm font-bold">{progress.current}/{progress.total}</span>
             </div>
           )}
 
@@ -161,11 +161,11 @@ export default function Header({
             <div className="relative">
               <button
                 onClick={() => setShowPlatformSelector(!showPlatformSelector)}
-                className="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-white/[0.03] border border-white/10 text-white/70 hover:text-white transition text-sm"
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/[0.05] border border-white/20 text-white hover:bg-white/10 transition text-sm font-semibold"
               >
-                <span>🤖</span>
-                <span>{selectedPlatforms?.length || 0}</span>
-                <svg className={`w-3 h-3 transition-transform ${showPlatformSelector ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <span className="text-lg">🤖</span>
+                <span>{selectedPlatforms?.length || 0} Models</span>
+                <svg className={`w-4 h-4 transition-transform ${showPlatformSelector ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
               </button>
@@ -180,12 +180,12 @@ export default function Header({
           )}
 
           {isRunning ? (
-            <button onClick={onStopTests} className="px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20 text-sm font-semibold">
+            <button onClick={onStopTests} className="px-5 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-sm font-bold shadow-lg shadow-red-500/30 transition">
               ⏹ Stop
             </button>
           ) : (
-            <button onClick={onRunTests} className="px-3 py-1.5 rounded-lg bg-primary-500 hover:bg-primary-600 text-white text-sm font-semibold">
-              ▶ Run
+            <button onClick={onRunTests} className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-primary-500 to-purple-500 hover:from-primary-600 hover:to-purple-600 text-white text-sm font-bold shadow-lg shadow-primary-500/30 transition">
+              ▶ Run Tests
             </button>
           )}
 
