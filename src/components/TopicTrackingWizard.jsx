@@ -613,7 +613,7 @@ Return ONLY a JSON array with this structure:
   }, [selectedTopics, topicPromptCounts, promptsPerTopic])
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 overflow-y-auto p-4">
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] overflow-y-auto p-4">
       <div className="w-full max-w-4xl mx-auto bg-[#1a1a1f] rounded-2xl border border-white/10">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
