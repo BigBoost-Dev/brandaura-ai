@@ -37,8 +37,9 @@ export default function TopicTrackingWizard({ userId, onComplete, onCancel, exis
   const [brandInput, setBrandInput] = useState('')
   const [competitors, setCompetitors] = useState([])
   const [competitorInput, setCompetitorInput] = useState('')
-  const [selectedWebsite, setSelectedWebsite] = useState(null)
-  const [industry, setIndustry] = useState('Digital Marketing')
+  const [selectedWebsite, setSelectedWebsite] = useState(existingBrands.length > 0 ? existingBrands[0] : null)
+  const [industry, setIndustry] = useState(existingBrands.length > 0 ? (existingBrands[0].industry || 'Digital Marketing') : 'Digital Marketing')
+  const [isCreatingNewBrand, setIsCreatingNewBrand] = useState(false)
 
   // Step 2: AI Search Engines
   const [selectedEngines, setSelectedEngines] = useState([])
@@ -613,7 +614,7 @@ Return ONLY a JSON array with this structure:
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-start justify-center p-4 overflow-y-auto">
-      <div className="w-full max-w-4xl my-auto bg-[#1a1a1f] rounded-2xl border border-white/10 flex flex-col max-h-[calc(100vh-2rem)] overflow-hidden">
+      <div className="w-full max-w-4xl mt-4 mb-4 bg-[#1a1a1f] rounded-2xl border border-white/10 flex flex-col max-h-[calc(100vh-2rem)] overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 flex-shrink-0">
           <h2 className="text-xl font-bold">Track Topic Performance</h2>
