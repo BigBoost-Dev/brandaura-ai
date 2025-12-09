@@ -1,9 +1,9 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts'
 import { useAuthStore, useBrandsStore, useResultsStore, useUIStore } from '../hooks/useStore'
 import { AI_PLATFORMS, MENTION_TYPES, FUNNEL_STAGES, INDUSTRY_BENCHMARKS } from '../lib/constants'
-import { queryAI, analyzeResponse, generateQueries, calculateMetrics } from '../lib/api'
+import { calculateMetrics } from '../lib/api'
 import Header from '../components/Header'
 import Sidebar from '../components/Sidebar'
 import MetricCard from '../components/MetricCard'
@@ -17,25 +17,16 @@ import AISearchPerformance from '../components/AISearchPerformance'
 export default function Dashboard() {
   const navigate = useNavigate()
   const { user, profile, loading: authLoading, signOut } = useAuthStore()
-  const { brands, activeBrandId, loadBrands, getActiveBrand, setActiveBrand, deleteBrand } = useBrandsStore()
-  const { loadResults, addResults, getResults } = useResultsStore()
-  const { activeTab, setActiveTab, isTestRunning, setTestRunning, testProgress, setTestProgress, addLog } = useUIStore()
+  const { brands, activeBrandId, loadBrands, getActiveBrand, setActiveBrand } = useBrandsStore()
+  const { loadResults, getResults } = useResultsStore()
+  const { activeTab, setActiveTab } = useUIStore()
   
   const [showTopicWizard, setShowTopicWizard] = useState(false)
   const [metrics, setMetrics] = useState(null)
-  const [selectedPlatforms, setSelectedPlatforms] = useState([])
-  const [showPlatformSelector, setShowPlatformSelector] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const abortControllerRef = useRef(null)
 
   const activeBrand = getActiveBrand()
   const brandResults = activeBrand ? getResults(activeBrand.id) : []
-
-  useEffect(() => {
-    if (activeBrand?.selected_platforms) {
-      setSelectedPlatforms(activeBrand.selected_platforms)
-    }
-  }, [activeBrand?.id])
 
   useEffect(() => {
     if (!authLoading && !user) navigate('/login', { replace: true })
@@ -59,84 +50,6 @@ export default function Dashboard() {
   useEffect(() => {
     if (!authLoading && brands.length === 0) setShowTopicWizard(true)
   }, [brands, authLoading])
-
-  const stopTests = useCallback(() => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort()
-      abortControllerRef.current = null
-      setTestRunning(false)
-      setTestProgress({ current: 0, total: 0, platform: '', query: '' })
-      addLog({ message: '⏹ Tests stopped by user', type: 'warning' })
-    }
-  }, [addLog, setTestRunning, setTestProgress])
-
-  const runTests = useCallback(async () => {
-    if (isTestRunning || !activeBrand || !user) return
-    
-    abortControllerRef.current = new AbortController()
-    setTestRunning(true)
-    addLog({ message: `🚀 Starting tests for ${activeBrand.name}`, type: 'info' })
-
-    const platforms = selectedPlatforms.length > 0 ? selectedPlatforms : (activeBrand.selected_platforms || ['gpt-4o', 'claude-sonnet'])
-    const queries = generateQueries(activeBrand, platforms)
-    setTestProgress({ current: 0, total: queries.length, platform: '', query: '' })
-
-    const newResults = []
-    const batchId = Date.now().toString()
-
-    for (let i = 0; i < queries.length; i++) {
-      // Check abort immediately
-      if (abortControllerRef.current?.signal.aborted) {
-        addLog({ message: '⏹ Tests cancelled', type: 'warning' })
-        break
-      }
-
-      const { query, type, platformId } = queries[i]
-      const platform = AI_PLATFORMS[platformId]
-      setTestProgress({ current: i + 1, total: queries.length, platform: platform.name, query })
-
-      try {
-        const { success, response, cost, error } = await queryAI(platform.model, query)
-        
-        // Check abort after API call
-        if (abortControllerRef.current?.signal.aborted) {
-          addLog({ message: '⏹ Tests cancelled', type: 'warning' })
-          break
-        }
-        
-        if (success && response) {
-          const analysis = analyzeResponse(response, activeBrand.name, activeBrand.competitors || [])
-          newResults.push({
-            brand_id: activeBrand.id, user_id: user.id, batch_id: batchId,
-            platform_id: platformId, platform_name: platform.name, model: platform.model,
-            query, query_type: type, brand_mention: analysis.brandMention,
-            brand_position: analysis.brandPosition, sentiment: analysis.sentiment,
-            confidence: analysis.confidence, mention_count: analysis.mentionCount,
-            competitor_mentions: analysis.competitorMentions, snippet: analysis.snippet,
-            cost: cost || 0
-          })
-          addLog({ message: `${MENTION_TYPES[analysis.brandMention]?.emoji} ${platform.name}: ${MENTION_TYPES[analysis.brandMention]?.label}`, type: 'info' })
-        } else addLog({ message: `❌ ${platform.name}: ${error}`, type: 'error' })
-      } catch (err) { 
-        if (err.name === 'AbortError') break
-        addLog({ message: `❌ ${err.message}`, type: 'error' }) 
-      }
-      
-      // Short delay with abort check - use smaller chunks so we can stop faster
-      for (let j = 0; j < 11; j++) {
-        if (abortControllerRef.current?.signal.aborted) break
-        await new Promise(r => setTimeout(r, 100))
-      }
-    }
-
-    if (newResults.length > 0) {
-      await addResults(activeBrand.id, newResults)
-      addLog({ message: `✅ Done! ${newResults.length} results saved`, type: 'success' })
-    }
-    
-    abortControllerRef.current = null
-    setTestRunning(false)
-  }, [isTestRunning, activeBrand, user, selectedPlatforms, addLog, setTestProgress, setTestRunning, addResults])
 
   if (authLoading) return <div className="min-h-screen bg-dark-400 flex items-center justify-center"><div className="spinner w-8 h-8" /></div>
 
@@ -163,14 +76,6 @@ export default function Dashboard() {
         onBrandChange={setActiveBrand} 
         onAddBrand={() => setShowTopicWizard(true)} 
         onSignOut={signOut}
-        isRunning={isTestRunning} 
-        progress={testProgress} 
-        onRunTests={runTests} 
-        onStopTests={stopTests}
-        showPlatformSelector={showPlatformSelector} 
-        setShowPlatformSelector={setShowPlatformSelector}
-        selectedPlatforms={selectedPlatforms} 
-        setSelectedPlatforms={setSelectedPlatforms}
         onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
         onOpenTopicWizard={() => setShowTopicWizard(true)}
       />
