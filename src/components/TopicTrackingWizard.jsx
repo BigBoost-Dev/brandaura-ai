@@ -23,7 +23,7 @@ const STEPS = [
 ]
 
 export default function TopicTrackingWizard({ userId, onComplete, onCancel, existingBrands = [] }) {
-  const { addBrand } = useBrandsStore()
+  const { addBrand, updateBrand } = useBrandsStore()
   
   // Current step
   const [currentStep, setCurrentStep] = useState(1)
@@ -490,24 +490,32 @@ Make prompts diverse across types, personas, and intents. Return ONLY JSON.`)
   const handleComplete = async () => {
     setLoading(true)
     try {
-      // Save brand if new
-      if (!selectedWebsite) {
+      const settingsData = {
+        engines: selectedEngines,
+        location: selectedLocation,
+        frequency: trackingFrequency,
+        topics: selectedTopics.map(id => topics.find(t => t.id === id)),
+        prompts: generatedPrompts,
+        promptTypes: enabledPromptTypes,
+        intents: enabledIntents,
+        personas: selectedPersonas
+      }
+
+      if (selectedWebsite) {
+        // Update existing brand with new tracking settings
+        await updateBrand(selectedWebsite.id, {
+          competitors: competitors.map(c => c.domain),
+          settings: settingsData
+        })
+      } else {
+        // Create new brand
         await addBrand(userId, {
           name: brandNames[0] || website,
           website,
           brand_names: brandNames,
           industry,
           competitors: competitors.map(c => c.domain),
-          settings: {
-            engines: selectedEngines,
-            location: selectedLocation,
-            frequency: trackingFrequency,
-            topics: selectedTopics.map(id => topics.find(t => t.id === id)),
-            prompts: generatedPrompts,
-            promptTypes: enabledPromptTypes,
-            intents: enabledIntents,
-            personas: selectedPersonas
-          }
+          settings: settingsData
         })
       }
       onComplete?.()

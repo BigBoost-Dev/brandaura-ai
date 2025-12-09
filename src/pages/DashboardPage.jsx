@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts'
 import { useAuthStore, useBrandsStore, useResultsStore, useUIStore } from '../hooks/useStore'
+import { useTracking } from '../hooks/useTracking'
 import { AI_PLATFORMS, MENTION_TYPES, FUNNEL_STAGES, INDUSTRY_BENCHMARKS } from '../lib/constants'
 import { calculateMetrics } from '../lib/api'
 import Header from '../components/Header'
@@ -20,6 +21,7 @@ export default function Dashboard() {
   const { brands, activeBrandId, loadBrands, getActiveBrand, setActiveBrand } = useBrandsStore()
   const { loadResults, getResults } = useResultsStore()
   const { activeTab, setActiveTab } = useUIStore()
+  const { isRunning: isTracking, progress: trackingProgress, logs: trackingLogs, runTracking, stopTracking } = useTracking()
   
   const [showTopicWizard, setShowTopicWizard] = useState(false)
   const [metrics, setMetrics] = useState(null)
@@ -27,6 +29,9 @@ export default function Dashboard() {
 
   const activeBrand = getActiveBrand()
   const brandResults = activeBrand ? getResults(activeBrand.id) : []
+  
+  // Check if brand has tracking configuration from wizard
+  const hasTrackingConfig = activeBrand?.settings?.prompts?.length > 0
 
   useEffect(() => {
     if (!authLoading && !user) navigate('/login', { replace: true })
@@ -50,6 +55,15 @@ export default function Dashboard() {
   useEffect(() => {
     if (!authLoading && brands.length === 0) setShowTopicWizard(true)
   }, [brands, authLoading])
+
+  // Handle run tracking
+  const handleRunTracking = async () => {
+    if (activeBrand && user) {
+      await runTracking(activeBrand, user.id)
+      // Reload results after tracking
+      loadResults(activeBrand.id)
+    }
+  }
 
   if (authLoading) return <div className="min-h-screen bg-dark-400 flex items-center justify-center"><div className="spinner w-8 h-8" /></div>
 
@@ -78,6 +92,12 @@ export default function Dashboard() {
         onSignOut={signOut}
         onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
         onOpenTopicWizard={() => setShowTopicWizard(true)}
+        // Tracking props
+        isTracking={isTracking}
+        trackingProgress={trackingProgress}
+        onRunTracking={handleRunTracking}
+        onStopTracking={stopTracking}
+        hasTrackingConfig={hasTrackingConfig}
       />
 
       <div className="flex">
