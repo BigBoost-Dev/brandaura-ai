@@ -166,11 +166,25 @@ export default function CompetitorDashboard({
       return entry
     }).slice(-30)
 
-    // Market position ranking
+    // Market position ranking - sorted by Share of Voice (mention frequency)
     const allBrands = [
-      { name: brand?.name || 'Your Brand', score: yourScore, isYou: true, color: '#818cf8' },
-      ...competitorData.map(c => ({ name: c.name, score: c.score, isYou: false, color: c.color }))
-    ].sort((a, b) => b.score - a.score)
+      { 
+        name: brand?.name || 'Your Brand', 
+        score: yourScore, 
+        sov: totalMentions > 0 ? Math.round(yourMentions.length / totalMentions * 100) : 0,
+        mentions: yourMentions.length,
+        isYou: true, 
+        color: '#818cf8' 
+      },
+      ...competitorData.map(c => ({ 
+        name: c.name, 
+        score: c.score, 
+        sov: totalMentions > 0 ? Math.round(c.mentionCount / totalMentions * 100) : 0,
+        mentions: c.mentionCount,
+        isYou: false, 
+        color: c.color 
+      }))
+    ].sort((a, b) => b.sov - a.sov)
 
     const yourRank = allBrands.findIndex(b => b.isYou) + 1
 
@@ -248,8 +262,8 @@ export default function CompetitorDashboard({
             </div>
           </div>
           <div className="text-right">
-            <div className="text-sm text-white/60">Your Visibility Score</div>
-            <div className="text-3xl font-bold text-primary-400">{competitorMetrics.yourBrand.score}%</div>
+            <div className="text-sm text-white/60">Your Share of Voice</div>
+            <div className="text-3xl font-bold text-primary-400">{competitorMetrics.sovData.find(s => s.isYou)?.share || 0}%</div>
           </div>
         </div>
       </div>
@@ -317,6 +331,7 @@ export default function CompetitorDashboard({
             {/* Ranking Table */}
             <div className="card p-6">
               <h3 className="text-lg font-bold mb-4">Market Ranking</h3>
+              <p className="text-xs text-white/40 mb-4">Ranked by Share of Voice (mention frequency)</p>
               <div className="space-y-3">
                 {competitorMetrics.allBrands.map((brand, index) => (
                   <div 
@@ -335,15 +350,16 @@ export default function CompetitorDashboard({
                           <span className="text-xs text-primary-400 bg-primary-500/20 px-2 py-0.5 rounded">You</span>
                         )}
                       </div>
+                      <div className="text-xs text-white/40">{brand.mentions} mentions</div>
                     </div>
                     <div className="w-32 h-2 bg-white/10 rounded-full overflow-hidden">
                       <div 
                         className="h-full rounded-full transition-all"
-                        style={{ width: `${brand.score}%`, backgroundColor: brand.color }}
+                        style={{ width: `${brand.sov}%`, backgroundColor: brand.color }}
                       />
                     </div>
                     <div className="w-16 text-right font-mono font-bold" style={{ color: brand.color }}>
-                      {brand.score}%
+                      {brand.sov}%
                     </div>
                   </div>
                 ))}
@@ -354,7 +370,7 @@ export default function CompetitorDashboard({
           {/* Competitor Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {competitorMetrics.competitors.map(comp => {
-              const diff = competitorMetrics.yourBrand.score - comp.score
+              const mentionDiff = competitorMetrics.yourBrand.mentionCount - comp.mentionCount
               return (
                 <div 
                   key={comp.name}
@@ -375,8 +391,8 @@ export default function CompetitorDashboard({
                       <div className="font-semibold">{comp.name}</div>
                       <div className="text-sm text-white/50">{comp.mentionCount} mentions</div>
                     </div>
-                    <div className={`text-lg font-bold ${diff > 0 ? 'text-green-400' : diff < 0 ? 'text-red-400' : 'text-white/50'}`}>
-                      {diff > 0 ? '+' : ''}{diff}
+                    <div className={`text-lg font-bold ${mentionDiff > 0 ? 'text-green-400' : mentionDiff < 0 ? 'text-red-400' : 'text-white/50'}`}>
+                      {mentionDiff > 0 ? '+' : ''}{mentionDiff}
                     </div>
                   </div>
                   

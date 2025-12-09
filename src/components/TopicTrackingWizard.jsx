@@ -612,10 +612,10 @@ Return ONLY a JSON array with this structure:
   }, [selectedTopics, topicPromptCounts, promptsPerTopic])
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-4xl max-h-[90vh] bg-[#1a1a1f] rounded-2xl border border-white/10 flex flex-col overflow-hidden">
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+      <div className="w-full max-w-4xl my-4 bg-[#1a1a1f] rounded-2xl border border-white/10 flex flex-col max-h-[calc(100vh-2rem)] overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 flex-shrink-0">
           <h2 className="text-xl font-bold">Track Topic Performance</h2>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 text-sm text-green-400">
@@ -636,7 +636,7 @@ Return ONLY a JSON array with this structure:
         </div>
 
         {/* Progress Stepper */}
-        <div className="px-6 py-4 border-b border-white/5">
+        <div className="px-6 py-4 border-b border-white/5 flex-shrink-0">
           <div className="flex items-center justify-between">
             {STEPS.map((step, index) => (
               <React.Fragment key={step.id}>
@@ -667,7 +667,7 @@ Return ONLY a JSON array with this structure:
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-6 min-h-0">
           {/* Step 1: Website & Brands */}
           {currentStep === 1 && (
             <div className="space-y-6">
@@ -1726,7 +1726,7 @@ Return ONLY a JSON array with this structure:
         </div>
 
         {/* Footer Navigation */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-white/10">
+        <div className="flex items-center justify-between px-6 py-4 border-t border-white/10 flex-shrink-0">
           <button
             onClick={currentStep === 1 ? onCancel : handlePrevious}
             className="flex items-center gap-2 px-6 py-2.5 border border-white/20 rounded-lg text-white/80 hover:bg-white/5 transition-colors"
