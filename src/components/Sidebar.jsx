@@ -32,6 +32,12 @@ const navSections = [
       { id: 'reports', label: 'Reports', icon: '📈' },
       { id: 'alerts', label: 'Alerts', icon: '🔔' },
     ]
+  },
+  {
+    title: 'Settings',
+    items: [
+      { id: 'tracking-settings', label: 'Scheduling & Alerts', icon: '⚙️' },
+    ]
   }
 ]
 

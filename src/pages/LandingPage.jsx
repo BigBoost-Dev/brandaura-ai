@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { AI_PLATFORMS, PRICING_PLANS } from '../lib/constants'
+import { AI_PLATFORMS } from '../lib/constants'
 import { useAuthStore } from '../hooks/useStore'
 
 function LogoIcon({ size = 40 }) {
@@ -13,10 +13,7 @@ function LogoIcon({ size = 40 }) {
         </linearGradient>
         <filter id="logoGlow" x="-50%" y="-50%" width="200%" height="200%">
           <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
-          <feMerge>
-            <feMergeNode in="coloredBlur"/>
-            <feMergeNode in="SourceGraphic"/>
-          </feMerge>
+          <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
         </filter>
       </defs>
       <circle cx="50" cy="50" r="44" fill="none" stroke="url(#logoGradient)" strokeWidth="2" opacity="0.2"/>
@@ -32,28 +29,28 @@ export { LogoIcon }
 
 export default function LandingPage() {
   const [activeFeature, setActiveFeature] = useState(0)
-  const { user, profile, loading } = useAuthStore()
+  const { user, loading } = useAuthStore()
 
   const features = [
-    { icon: '🤖', title: '6 AI Platforms', desc: 'Track visibility across ChatGPT, Claude, Gemini, Perplexity, Llama, and more' },
-    { icon: '📊', title: 'Real-time Analytics', desc: 'Monitor visibility scores, share of voice, and competitive positioning' },
-    { icon: '🔔', title: 'Smart Alerts', desc: 'Get notified instantly when your visibility drops below threshold' },
-    { icon: '⏰', title: 'Scheduled Tests', desc: 'Automate daily, weekly, or monthly visibility checks' },
-    { icon: '📈', title: 'Industry Benchmarks', desc: 'Compare your performance against industry averages' },
-    { icon: '🏢', title: 'Multi-Brand', desc: 'Track multiple brands and products from one dashboard' }
+    { icon: '🔍', title: 'Source Attribution', desc: 'Discover WHERE AI learns about your brand - review sites, publications, forums. Know exactly what content to create.' },
+    { icon: '📊', title: 'Content Scoring', desc: 'Score any content 0-100 for AI discoverability. Get specific recommendations to improve before publishing.' },
+    { icon: '💡', title: 'Optimization Recommendations', desc: 'Actionable insights based on your results. Know exactly what to fix to get mentioned more.' },
+    { icon: '💰', title: 'ROI Analytics', desc: 'Estimate monthly reach, clicks, and dollar value from AI visibility. Connect mentions to business outcomes.' },
+    { icon: '⚔️', title: 'Competitor Intelligence', desc: 'Track competitor share of voice. See who AI recommends instead of you and why.' },
+    { icon: '🎯', title: 'Topic Tracking', desc: 'AI-powered 8-step wizard generates relevant topics and prompts for your industry automatically.' }
   ]
 
-  const testimonials = [
-    { name: 'Sarah Chen', role: 'Head of Marketing, TechCorp', text: 'Finally, a tool that shows us exactly how AI sees our brand. Invaluable for our SEO strategy.', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=sarah' },
-    { name: 'Marcus Johnson', role: 'CEO, StartupXYZ', text: 'We increased our AI visibility by 340% in 3 months using the insights from this tool.', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=marcus' },
-    { name: 'Emily Rodriguez', role: 'Growth Lead, ScaleUp', text: 'The competitive analysis alone is worth 10x the price. Game changer for our positioning.', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=emily' }
+  const problems = [
+    { question: "What's the best CRM for small business?", bad: "You're not mentioned. Competitors get all the traffic.", good: "You're recommended as the top choice." },
+    { question: "Compare Salesforce vs HubSpot vs [Your Brand]", bad: "AI doesn't know enough about you to compare.", good: "AI highlights your unique advantages." },
+    { question: "Is [Your Brand] worth it?", bad: "AI gives vague or outdated information.", good: "AI confidently recommends you with specifics." }
   ]
 
   const stats = [
-    { value: '527%', label: 'AI traffic growth in 2025' },
-    { value: '67%', label: 'Organizations using LLMs' },
-    { value: '50%', label: 'AI citations differ from Google' },
-    { value: '10x', label: 'ROI for early adopters' }
+    { value: '40%', label: 'of searches will use AI by 2026' },
+    { value: '67%', label: 'of users trust AI recommendations' },
+    { value: '3x', label: 'higher conversion from AI referrals' },
+    { value: '50%', label: 'of AI citations differ from Google' }
   ]
 
   return (
@@ -62,18 +59,13 @@ export default function LandingPage() {
       <nav className="fixed top-0 left-0 right-0 z-50 px-6 md:px-16 py-5 flex justify-between items-center bg-black/80 backdrop-blur-xl border-b border-white/5">
         <Link to="/" className="flex items-center gap-3">
           <LogoIcon size={40} />
-          <span className="text-xl font-extrabold tracking-tight">
-            BrandAura<span className="text-primary-400 ml-1">AI</span>
-          </span>
+          <span className="text-xl font-extrabold tracking-tight">BrandAura<span className="text-primary-400 ml-1">AI</span></span>
         </Link>
         <div className="hidden md:flex items-center gap-10">
+          <a href="#problem" className="text-white/70 hover:text-white text-sm font-medium transition">The Problem</a>
           <a href="#features" className="text-white/70 hover:text-white text-sm font-medium transition">Features</a>
-          <a href="#pricing" className="text-white/70 hover:text-white text-sm font-medium transition">Pricing</a>
-          <a href="#testimonials" className="text-white/70 hover:text-white text-sm font-medium transition">Testimonials</a>
-          
-          {loading ? (
-            <div className="w-20 h-10 bg-white/10 rounded-xl animate-pulse" />
-          ) : user ? (
+          <a href="#how-it-works" className="text-white/70 hover:text-white text-sm font-medium transition">How It Works</a>
+          {loading ? <div className="w-20 h-10 bg-white/10 rounded-xl animate-pulse" /> : user ? (
             <div className="flex items-center gap-4">
               <Link to="/dashboard" className="btn btn-primary">Dashboard</Link>
               <img src={user?.user_metadata?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email}`} alt="" className="w-9 h-9 rounded-xl border-2 border-primary-500/50" />
@@ -85,50 +77,32 @@ export default function LandingPage() {
             </>
           )}
         </div>
-        
-        {/* Mobile */}
         <div className="md:hidden">
-          {user ? (
-            <Link to="/dashboard" className="btn btn-primary text-sm px-4 py-2">Dashboard</Link>
-          ) : (
-            <Link to="/signup" className="btn btn-primary text-sm px-4 py-2">Get Started</Link>
-          )}
+          {user ? <Link to="/dashboard" className="btn btn-primary text-sm px-4 py-2">Dashboard</Link> : <Link to="/signup" className="btn btn-primary text-sm px-4 py-2">Get Started</Link>}
         </div>
       </nav>
 
-      {/* Hero Section */}
+      {/* Hero */}
       <section className="min-h-screen flex flex-col items-center justify-center px-6 pt-32 pb-20 relative text-center">
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary-500/10 rounded-full blur-[100px] pointer-events-none" />
         <div className="absolute top-1/3 right-1/4 w-72 h-72 bg-purple-500/10 rounded-full blur-[100px] pointer-events-none" />
-
         <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 mb-8 text-sm text-white/70">
           <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-          Now tracking 6 major AI platforms
+          The only AI visibility platform with source attribution
         </div>
-
-        <h1 className="text-5xl md:text-7xl lg:text-8xl font-black leading-[1.05] max-w-4xl mb-6 tracking-tight">
-          Track Your Brand's<br />
-          <span className="gradient-text">AI Visibility</span>
+        <h1 className="text-5xl md:text-7xl lg:text-8xl font-black leading-[1.05] max-w-5xl mb-6 tracking-tight">
+          Know Why AI<br /><span className="gradient-text">Recommends Your Competitors</span>
         </h1>
-
-        <p className="text-lg md:text-xl text-white/60 max-w-xl mb-12 leading-relaxed">
-          Monitor how ChatGPT, Claude, Gemini, and Perplexity see your brand. 
-          Get alerts when visibility drops. Beat competitors in AI search.
+        <p className="text-lg md:text-xl text-white/60 max-w-2xl mb-12 leading-relaxed">
+          Track what ChatGPT, Claude, Gemini & Perplexity say about your brand. Discover the sources they cite. Get actionable recommendations to become the brand AI recommends.
         </p>
-
         <div className="flex flex-col sm:flex-row gap-4 mb-16">
-          <Link to={user ? "/dashboard" : "/signup"} className="btn btn-primary text-lg px-10 py-5 shadow-lg shadow-primary-500/30">
-            {user ? 'Open Dashboard →' : 'Start Free Trial →'}
-          </Link>
-          <button className="btn btn-secondary text-lg px-10 py-5">Watch Demo</button>
+          <Link to={user ? "/dashboard" : "/signup"} className="btn btn-primary text-lg px-10 py-5 shadow-lg shadow-primary-500/30">{user ? 'Open Dashboard →' : 'Start Free →'}</Link>
+          <a href="#how-it-works" className="btn btn-secondary text-lg px-10 py-5">See How It Works</a>
         </div>
-
         <div className="flex gap-4">
           {Object.values(AI_PLATFORMS).slice(0, 6).map((p, i) => (
-            <div key={i} className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl border animate-float"
-              style={{ backgroundColor: `${p.color}15`, borderColor: `${p.color}30`, color: p.color, animationDelay: `${i * 0.2}s` }}>
-              {p.icon}
-            </div>
+            <div key={i} className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl border animate-float" style={{ backgroundColor: `${p.color}15`, borderColor: `${p.color}30`, color: p.color, animationDelay: `${i * 0.2}s` }}>{p.icon}</div>
           ))}
         </div>
       </section>
@@ -145,16 +119,46 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* The Problem */}
+      <section id="problem" className="py-24 px-6">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-extrabold mb-5 tracking-tight">The New SEO Battlefield</h2>
+            <p className="text-white/50 text-lg max-w-2xl mx-auto">People don't just Google anymore. They ask AI. If AI doesn't recommend you, you're invisible to a growing audience.</p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-6">
+            {problems.map((p, i) => (
+              <div key={i} className="rounded-3xl bg-white/[0.02] border border-white/5 overflow-hidden">
+                <div className="p-6 border-b border-white/5">
+                  <div className="text-sm text-white/40 mb-2">User asks AI:</div>
+                  <div className="text-lg font-semibold">"{p.question}"</div>
+                </div>
+                <div className="p-6 space-y-4">
+                  <div className="flex items-start gap-3">
+                    <span className="text-red-400 text-xl">✗</span>
+                    <div><div className="text-sm text-red-400/80 font-medium mb-1">Without BrandAura:</div><div className="text-sm text-white/50">{p.bad}</div></div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <span className="text-emerald-400 text-xl">✓</span>
+                    <div><div className="text-sm text-emerald-400/80 font-medium mb-1">With BrandAura:</div><div className="text-sm text-white/50">{p.good}</div></div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Features */}
-      <section id="features" className="py-24 px-6">
+      <section id="features" className="py-24 px-6 bg-white/[0.02]">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-20">
-            <h2 className="text-4xl md:text-5xl font-extrabold mb-5 tracking-tight">Everything You Need to Dominate AI Search</h2>
-            <p className="text-white/50 text-lg max-w-xl mx-auto">The most comprehensive AI visibility tracking platform for brands serious about their AI presence</p>
+            <h2 className="text-4xl md:text-5xl font-extrabold mb-5 tracking-tight">More Than Just Tracking</h2>
+            <p className="text-white/50 text-lg max-w-xl mx-auto">Understand WHY AI recommends (or ignores) you. Get actionable insights to improve.</p>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {features.map((feature, i) => (
-              <div key={i} className={`p-9 rounded-3xl cursor-pointer transition-all duration-300 border ${activeFeature === i ? 'bg-gradient-to-br from-primary-500/15 to-purple-500/10 border-primary-500/30' : 'bg-white/[0.02] border-white/5 hover:border-white/10'}`} onMouseEnter={() => setActiveFeature(i)}>
+              <div key={i} className={`p-9 rounded-3xl cursor-pointer transition-all duration-300 border ${activeFeature === i ? 'bg-gradient-to-br from-primary-500/15 to-purple-500/10 border-primary-500/30' : 'bg-black/50 border-white/5 hover:border-white/10'}`} onMouseEnter={() => setActiveFeature(i)}>
                 <div className="text-5xl mb-6">{feature.icon}</div>
                 <h3 className="text-xl font-bold mb-3">{feature.title}</h3>
                 <p className="text-white/50 leading-relaxed">{feature.desc}</p>
@@ -164,70 +168,54 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Pricing */}
-      <section id="pricing" className="py-24 px-6 bg-white/[0.02]">
+      {/* How It Works */}
+      <section id="how-it-works" className="py-24 px-6">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-20">
-            <h2 className="text-4xl md:text-5xl font-extrabold mb-5 tracking-tight">Simple, Transparent Pricing</h2>
-            <p className="text-white/50 text-lg">Start free, upgrade when you need more</p>
+            <h2 className="text-4xl md:text-5xl font-extrabold mb-5 tracking-tight">How It Works</h2>
+            <p className="text-white/50 text-lg">Three steps to AI visibility dominance</p>
           </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {Object.entries(PRICING_PLANS).map(([key, plan]) => (
-              <div key={key} className={`p-8 rounded-3xl relative ${plan.popular ? 'bg-gradient-to-br from-primary-500/20 to-purple-500/10 border-2 border-primary-500/50' : 'bg-white/[0.02] border border-white/5'}`}>
-                {plan.popular && <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded-full gradient-primary text-xs font-semibold">Most Popular</div>}
-                <div className="text-lg font-semibold mb-2 text-white/70">{plan.name}</div>
-                <div className="text-5xl font-black mb-6 font-mono">
-                  {typeof plan.price === 'number' ? `$${plan.price}` : plan.price}
-                  {typeof plan.price === 'number' && <span className="text-base text-white/40">/mo</span>}
-                </div>
-                <div className="mb-6 text-sm text-white/50 space-y-1">
-                  <div>{plan.tests} tests/month</div>
-                  <div>{plan.brands} brand{plan.brands !== 1 && 's'}</div>
-                  <div>{plan.platforms} platforms</div>
-                </div>
-                <ul className="mb-8 space-y-3">
-                  {plan.features.map((f, j) => <li key={j} className="text-sm text-white/60 flex items-start gap-3"><span className="text-green-400">✓</span> {f}</li>)}
-                </ul>
-                <Link to={user ? "/dashboard" : "/signup"} className={`btn w-full ${plan.popular ? 'btn-primary' : 'btn-secondary'}`}>
-                  {user ? 'Go to Dashboard' : 'Get Started'}
-                </Link>
+          <div className="grid md:grid-cols-3 gap-8">
+            {[
+              { step: '01', title: 'Setup Your Brand', desc: 'Enter your website. Our AI wizard automatically generates relevant topics, prompts, and identifies competitors.', icon: '🚀' },
+              { step: '02', title: 'Run Tracking', desc: 'We query multiple AI engines with your configured prompts. See exactly what they say about you.', icon: '🔄' },
+              { step: '03', title: 'Get Insights', desc: 'View source attribution, content scores, and recommendations. Know exactly what to improve.', icon: '📈' }
+            ].map((item, i) => (
+              <div key={i} className="text-center">
+                <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary-500/20 to-purple-500/10 border border-primary-500/30 flex items-center justify-center text-4xl mx-auto mb-6">{item.icon}</div>
+                <div className="text-primary-400 font-mono text-sm mb-2">Step {item.step}</div>
+                <h3 className="text-xl font-bold mb-3">{item.title}</h3>
+                <p className="text-white/50">{item.desc}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Testimonials */}
-      <section id="testimonials" className="py-24 px-6">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-20">
-            <h2 className="text-4xl md:text-5xl font-extrabold tracking-tight">Loved by Marketing Teams</h2>
-          </div>
-          <div className="grid md:grid-cols-3 gap-6">
-            {testimonials.map((t, i) => (
-              <div key={i} className="p-8 rounded-3xl bg-white/[0.02] border border-white/5">
-                <p className="text-white/70 leading-relaxed mb-6">"{t.text}"</p>
-                <div className="flex items-center gap-4">
-                  <img src={t.avatar} alt={t.name} className="w-12 h-12 rounded-full" />
-                  <div>
-                    <div className="font-semibold">{t.name}</div>
-                    <div className="text-sm text-white/40">{t.role}</div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+      {/* Capabilities */}
+      <section className="py-24 px-6 bg-white/[0.02]">
+        <div className="max-w-6xl mx-auto grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[
+            { icon: '🤖', title: '6 AI Engines', desc: 'ChatGPT, Claude, Gemini, Perplexity, and more' },
+            { icon: '📈', title: 'Trend Analysis', desc: 'Track visibility changes over time' },
+            { icon: '🏢', title: 'Multi-Brand', desc: 'Manage multiple brands from one dashboard' },
+            { icon: '📑', title: 'Full Responses', desc: 'See exactly what AI says about you' }
+          ].map((cap, i) => (
+            <div key={i} className="p-6 rounded-2xl bg-black/50 border border-white/5 text-center">
+              <div className="text-4xl mb-4">{cap.icon}</div>
+              <h3 className="font-bold mb-2">{cap.title}</h3>
+              <p className="text-sm text-white/50">{cap.desc}</p>
+            </div>
+          ))}
         </div>
       </section>
 
       {/* CTA */}
       <section className="py-24 px-6">
         <div className="max-w-3xl mx-auto p-16 rounded-[2rem] bg-gradient-to-br from-primary-500/20 to-purple-500/10 border border-primary-500/30 text-center">
-          <h2 className="text-4xl md:text-5xl font-extrabold mb-5 tracking-tight">Ready to Dominate AI Search?</h2>
-          <p className="text-white/60 text-lg mb-10">Join 500+ brands already tracking their AI visibility. Start free, no credit card required.</p>
-          <Link to={user ? "/dashboard" : "/signup"} className="btn btn-primary text-lg px-12 py-5 shadow-lg shadow-primary-500/40">
-            {user ? 'Open Dashboard →' : 'Start Your Free Trial →'}
-          </Link>
+          <h2 className="text-4xl md:text-5xl font-extrabold mb-5 tracking-tight">Ready to See What AI Says About You?</h2>
+          <p className="text-white/60 text-lg mb-10">Stop guessing. Start tracking. Discover exactly how to become the brand AI recommends.</p>
+          <Link to={user ? "/dashboard" : "/signup"} className="btn btn-primary text-lg px-12 py-5 shadow-lg shadow-primary-500/40">{user ? 'Open Dashboard →' : 'Start Free →'}</Link>
         </div>
       </section>
 

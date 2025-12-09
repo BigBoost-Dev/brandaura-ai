@@ -18,6 +18,7 @@ import SourcesAttribution from '../components/SourcesAttribution'
 import RecommendationsDashboard from '../components/RecommendationsDashboard'
 import ContentScoreDashboard from '../components/ContentScoreDashboard'
 import ROIAnalytics from '../components/ROIAnalytics'
+import TrackingSettings from '../components/TrackingSettings'
 
 export default function Dashboard() {
   const navigate = useNavigate()
@@ -174,6 +175,13 @@ export default function Dashboard() {
           {activeTab === 'results' && <ResultsView results={brandResults} />}
           {activeTab === 'reports' && <ReportsView brand={activeBrand} results={brandResults} />}
           {activeTab === 'alerts' && <AlertsView brand={activeBrand} />}
+          {activeTab === 'tracking-settings' && (
+            <TrackingSettings 
+              brand={activeBrand}
+              userId={user?.id}
+              onSave={() => loadBrands(user.id)}
+            />
+          )}
         </main>
       </div>
     </div>

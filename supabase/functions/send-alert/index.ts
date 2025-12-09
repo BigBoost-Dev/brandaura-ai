@@ -31,7 +31,7 @@ serve(async (req) => {
     }
 
     const drop = (oldScore - newScore).toFixed(1)
-    const appUrl = Deno.env.get('APP_URL') || 'https://aivisibility.app'
+    const appUrl = Deno.env.get('APP_URL') || 'https://brandaura.bigboost.agency'
 
     // Send email via Resend
     const response = await fetch('https://api.resend.com/emails', {
@@ -41,7 +41,7 @@ serve(async (req) => {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        from: 'AI Visibility Tracker <alerts@aivisibility.app>',
+        from: 'BrandAura AI <alerts@brandaura.bigboost.agency>',
         to: [email],
         subject: `⚠️ Visibility Alert: ${brandName} dropped ${drop}%`,
         html: `
@@ -152,7 +152,7 @@ serve(async (req) => {
                             </td>
                             <td align="right">
                               <p style="color: rgba(255,255,255,0.3); font-size: 12px; margin: 0;">
-                                AI Visibility Tracker
+                                BrandAura AI
                               </p>
                             </td>
                           </tr>
@@ -180,7 +180,7 @@ Tips to improve:
 - Monitor competitor strategies
 
 ---
-AI Visibility Tracker
+BrandAura AI
 Manage alerts: ${appUrl}/dashboard?tab=settings
         `
       })
