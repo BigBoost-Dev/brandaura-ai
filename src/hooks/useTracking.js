@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback } from 'react'
 import { queryAI, analyzeResponse } from '../lib/api'
+import { extractSources } from '../lib/aiAnalysis'
 import { AI_SEARCH_ENGINES } from '../lib/constants'
 import { useResultsStore } from './useStore'
 
@@ -73,6 +74,9 @@ export function useTracking() {
           if (success && response) {
             const analysis = analyzeResponse(response, brand.name, brand.competitors || [])
             
+            // Extract sources from response
+            const sources = extractSources(response, analysis.citedUrls || [])
+            
             // Find topic info
             const topic = topics.find(t => t.id === prompt.topicId) || {}
 
@@ -87,7 +91,7 @@ export function useTracking() {
               // Query info
               query: prompt.text,
               query_type: prompt.type || 'branded',
-              // Topic info (new!)
+              // Topic info
               topic_id: prompt.topicId,
               topic_name: prompt.topicName || topic.name,
               prompt_persona: prompt.persona,
@@ -101,6 +105,9 @@ export function useTracking() {
               competitor_mentions: analysis.competitorMentions,
               snippet: analysis.snippet,
               full_response: response,
+              // Source attribution (NEW!)
+              cited_urls: analysis.citedUrls || [],
+              sources: sources,
               // Meta
               cost: cost || 0,
               created_at: new Date().toISOString()
@@ -112,6 +119,11 @@ export function useTracking() {
                          analysis.brandMention === 'notMentioned' ? '❌' : '⚠️'
             
             addLog(`${emoji} ${engine.name}: ${analysis.brandMention} (${prompt.topicName || 'General'})`, 'info')
+            
+            // Log sources if found
+            if (sources.length > 0) {
+              addLog(`   📎 Sources: ${sources.map(s => s.name).join(', ')}`, 'info')
+            }
           } else {
             addLog(`❌ ${engine.name}: ${error || 'No response'}`, 'error')
           }
@@ -140,7 +152,9 @@ export function useTracking() {
     // Calculate summary
     const mentioned = results.filter(r => r.brand_mention !== 'notMentioned').length
     const leaders = results.filter(r => r.brand_mention === 'leader').length
+    const totalSources = results.reduce((sum, r) => sum + (r.sources?.length || 0), 0)
     addLog(`📊 Summary: ${mentioned}/${results.length} mentions (${leaders} top picks)`, 'success')
+    addLog(`🔗 Identified ${totalSources} source citations`, 'success')
 
     abortRef.current = null
     setIsRunning(false)

@@ -5,30 +5,32 @@ const navSections = [
     title: 'Overview',
     items: [
       { id: 'dashboard', label: 'Dashboard', icon: '📊' },
-      { id: 'visibility', label: 'AI Visibility', icon: '👁️', badge: 'NEW' },
-      { id: 'ai-search', label: 'AI Search', icon: '🔍', badge: 'NEW' },
+      { id: 'score', label: 'AI Score', icon: '🎯', badge: 'NEW' },
+      { id: 'visibility', label: 'AI Visibility', icon: '👁️' },
     ]
   },
   {
     title: 'Intelligence',
     items: [
-      { id: 'topics', label: 'Topics', icon: '🎯' },
+      { id: 'sources', label: 'Sources', icon: '🔗', badge: 'NEW' },
+      { id: 'recommendations', label: 'Recommendations', icon: '💡', badge: 'NEW' },
       { id: 'competitors', label: 'Competitors', icon: '⚔️' },
-      { id: 'platforms', label: 'Platforms', icon: '🤖' },
+    ]
+  },
+  {
+    title: 'Performance',
+    items: [
+      { id: 'ai-search', label: 'AI Search', icon: '🔍' },
+      { id: 'topics', label: 'Topics', icon: '📑' },
+      { id: 'roi', label: 'ROI Analytics', icon: '💰', badge: 'NEW' },
     ]
   },
   {
     title: 'Data',
     items: [
       { id: 'results', label: 'All Results', icon: '📝', showCount: true },
-      { id: 'reports', label: 'Reports', icon: '📈', badge: 'NEW' },
-    ]
-  },
-  {
-    title: 'Configuration',
-    items: [
+      { id: 'reports', label: 'Reports', icon: '📈' },
       { id: 'alerts', label: 'Alerts', icon: '🔔' },
-      { id: 'settings', label: 'Settings', icon: '⚙️' },
     ]
   }
 ]

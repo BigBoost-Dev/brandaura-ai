@@ -14,6 +14,10 @@ import VisibilityDashboard from '../components/VisibilityDashboard'
 import CompetitorDashboard from '../components/CompetitorDashboard'
 import TopicPerformance from '../components/TopicPerformance'
 import AISearchPerformance from '../components/AISearchPerformance'
+import SourcesAttribution from '../components/SourcesAttribution'
+import RecommendationsDashboard from '../components/RecommendationsDashboard'
+import ContentScoreDashboard from '../components/ContentScoreDashboard'
+import ROIAnalytics from '../components/ROIAnalytics'
 
 export default function Dashboard() {
   const navigate = useNavigate()
@@ -110,13 +114,33 @@ export default function Dashboard() {
         />
         
         <main className="flex-1 p-4 md:p-6 lg:ml-60">
-          {activeTab === 'dashboard' && <DashboardView metrics={metrics} activeBrand={activeBrand} onRunTests={runTests} isRunning={isTestRunning} onOpenTopicWizard={() => setShowTopicWizard(true)} />}
+          {activeTab === 'dashboard' && <DashboardView metrics={metrics} activeBrand={activeBrand} onRunTests={handleRunTracking} isRunning={isTracking} onOpenTopicWizard={() => setShowTopicWizard(true)} />}
+          {activeTab === 'score' && (
+            <ContentScoreDashboard 
+              results={brandResults}
+              brand={activeBrand}
+              competitors={activeBrand?.competitors || []}
+            />
+          )}
           {activeTab === 'visibility' && (
             <VisibilityDashboard 
               results={brandResults} 
               brand={activeBrand}
               competitors={activeBrand?.competitors || []}
               timeRange="30d"
+            />
+          )}
+          {activeTab === 'sources' && (
+            <SourcesAttribution 
+              results={brandResults}
+              brand={activeBrand}
+            />
+          )}
+          {activeTab === 'recommendations' && (
+            <RecommendationsDashboard 
+              results={brandResults}
+              brand={activeBrand}
+              competitors={activeBrand?.competitors || []}
             />
           )}
           {activeTab === 'ai-search' && (
@@ -133,6 +157,12 @@ export default function Dashboard() {
               competitors={activeBrand?.competitors || []}
             />
           )}
+          {activeTab === 'roi' && (
+            <ROIAnalytics 
+              results={brandResults}
+              brand={activeBrand}
+            />
+          )}
           {activeTab === 'competitors' && (
             <CompetitorDashboard 
               results={brandResults}
@@ -141,11 +171,9 @@ export default function Dashboard() {
               timeRange="30d"
             />
           )}
-          {activeTab === 'platforms' && <PlatformsView platforms={activeBrand?.selected_platforms || []} metrics={metrics} />}
           {activeTab === 'results' && <ResultsView results={brandResults} />}
           {activeTab === 'reports' && <ReportsView brand={activeBrand} results={brandResults} />}
           {activeTab === 'alerts' && <AlertsView brand={activeBrand} />}
-          {activeTab === 'settings' && <SettingsView brand={activeBrand} onDeleteBrand={deleteBrand} />}
         </main>
       </div>
     </div>
