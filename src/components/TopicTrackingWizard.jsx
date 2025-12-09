@@ -613,9 +613,8 @@ Return ONLY a JSON array with this structure:
   }, [selectedTopics, topicPromptCounts, promptsPerTopic])
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 overflow-y-auto">
-      <div className="min-h-full flex items-center justify-center p-4">
-        <div className="w-full max-w-4xl bg-[#1a1a1f] rounded-2xl border border-white/10 flex flex-col max-h-[90vh] overflow-hidden">
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 overflow-y-auto p-4">
+      <div className="w-full max-w-4xl mx-auto bg-[#1a1a1f] rounded-2xl border border-white/10 flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 flex-shrink-0">
           <h2 className="text-xl font-bold">Track Topic Performance</h2>
@@ -1845,7 +1844,6 @@ Return ONLY a JSON array with this structure:
             </button>
           )}
         </div>
-      </div>
       </div>
     </div>
   )
