@@ -12,6 +12,7 @@ import TopicTrackingWizard from '../components/TopicTrackingWizard'
 import VisibilityDashboard from '../components/VisibilityDashboard'
 import CompetitorDashboard from '../components/CompetitorDashboard'
 import TopicPerformance from '../components/TopicPerformance'
+import AISearchPerformance from '../components/AISearchPerformance'
 
 export default function Dashboard() {
   const navigate = useNavigate()
@@ -191,6 +192,12 @@ export default function Dashboard() {
               brand={activeBrand}
               competitors={activeBrand?.competitors || []}
               timeRange="30d"
+            />
+          )}
+          {activeTab === 'ai-search' && (
+            <AISearchPerformance 
+              results={brandResults}
+              brand={activeBrand}
             />
           )}
           {activeTab === 'topics' && (

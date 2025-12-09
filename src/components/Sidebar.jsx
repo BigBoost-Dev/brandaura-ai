@@ -6,6 +6,7 @@ const navSections = [
     items: [
       { id: 'dashboard', label: 'Dashboard', icon: '📊' },
       { id: 'visibility', label: 'AI Visibility', icon: '👁️', badge: 'NEW' },
+      { id: 'ai-search', label: 'AI Search', icon: '🔍', badge: 'NEW' },
     ]
   },
   {
