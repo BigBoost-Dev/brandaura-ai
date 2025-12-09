@@ -129,7 +129,7 @@ export default function TopicTrackingWizard({ userId, onComplete, onCancel, exis
     }
   }, [currentStep])
 
-  // Generate competitors based on website/industry
+  // Generate competitors based on website/brand
   const generateCompetitors = async () => {
     setGeneratingCompetitors(true)
     setError('')
@@ -137,44 +137,81 @@ export default function TopicTrackingWizard({ userId, onComplete, onCancel, exis
     const brandContext = brandNames.length > 0 ? brandNames.join(', ') : website
     
     try {
-      const response = await queryAI('openai/gpt-4o-mini', `You are a competitive intelligence expert. Given a business website and industry, identify their top 5 competitors.
+      const result = await queryAI('openai/gpt-4o-mini', `You are a competitive intelligence expert with access to market data. I need you to identify the TOP 5 DIRECT COMPETITORS for this specific company.
 
-Website: ${website || 'Not provided'}
-Brand: ${brandContext}
+Company Website: ${website}
+Company Brand Name(s): ${brandContext}
 Industry: ${industry}
 
-Return ONLY a JSON array with exactly 5 competitor objects. Each object should have:
-- domain: the competitor's website domain (e.g., "competitor.com")
-- name: the competitor's brand name
-- traffic: estimated monthly traffic (number)
-- growth: year-over-year traffic growth percentage (number, can be negative)
+IMPORTANT: Find the ACTUAL competitors that this specific company competes against in their market. These should be real companies that:
+1. Offer similar products/services
+2. Target the same customer base
+3. Operate in the same geographic market or compete online
 
-Example format:
+Return ONLY a valid JSON array with exactly 5 real competitor companies:
 [
-  {"domain": "competitor1.com", "name": "Competitor One", "traffic": 50000, "growth": 25},
-  {"domain": "competitor2.com", "name": "Competitor Two", "traffic": 120000, "growth": -5}
+  {"domain": "actualcompetitor.com", "name": "Actual Competitor Name", "traffic": 50000, "growth": 25},
+  {"domain": "realcompany.com", "name": "Real Company", "traffic": 120000, "growth": -5}
 ]
 
-Return ONLY the JSON array, no other text.`, { max_tokens: 500 })
+Rules:
+- Use REAL company domains and names only
+- Traffic should be realistic monthly visitor estimates
+- Growth is year-over-year percentage (can be negative)
+- Do NOT use placeholder names like "competitor1" or "example"
 
+Return ONLY the JSON array, nothing else.`)
+
+      if (!result.success) {
+        throw new Error(result.error || 'AI request failed')
+      }
+
+      const response = result.response
       const jsonMatch = response.match(/\[[\s\S]*\]/)
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0])
-        setCompetitors(parsed.slice(0, 5))
+        // Validate we got real data
+        if (parsed.length > 0 && parsed[0].domain && !parsed[0].domain.includes('competitor') && !parsed[0].domain.includes('example')) {
+          setCompetitors(parsed.slice(0, 5))
+          setGeneratingCompetitors(false)
+          return
+        }
       }
+      // If parsing failed or got bad data, throw to trigger retry
+      throw new Error('Invalid response format')
     } catch (err) {
-      console.error('Error generating competitors:', err)
-      // Set demo competitors
-      setCompetitors([
-        { domain: 'competitor1.com', name: 'Competitor One', traffic: 45000, growth: 32 },
-        { domain: 'competitor2.com', name: 'Competitor Two', traffic: 78000, growth: -8 },
-        { domain: 'competitor3.com', name: 'Competitor Three', traffic: 125000, growth: 45 },
-        { domain: 'competitor4.com', name: 'Competitor Four', traffic: 34000, growth: 12 },
-        { domain: 'competitor5.com', name: 'Competitor Five', traffic: 89000, growth: 28 },
-      ])
-    } finally {
-      setGeneratingCompetitors(false)
+      console.error('First attempt failed, retrying with simpler prompt:', err)
+      
+      // Retry with simpler prompt
+      try {
+        const retryResult = await queryAI('openai/gpt-4o-mini', `List 5 real companies that compete with ${brandContext || website} in the ${industry} industry. 
+
+Return as JSON array only:
+[{"domain":"company.com","name":"Company Name","traffic":50000,"growth":20}]
+
+Real companies only, no placeholders.`)
+
+        if (retryResult.success) {
+          const jsonMatch = retryResult.response.match(/\[[\s\S]*\]/)
+          if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0])
+            if (parsed.length > 0 && parsed[0].domain) {
+              setCompetitors(parsed.slice(0, 5))
+              setGeneratingCompetitors(false)
+              return
+            }
+          }
+        }
+      } catch (retryErr) {
+        console.error('Retry also failed:', retryErr)
+      }
+      
+      // Final fallback - empty state, let user add manually
+      setCompetitors([])
+      setError('Could not auto-detect competitors. Please add them manually.')
     }
+    
+    setGeneratingCompetitors(false)
   }
 
   // Generate topics based on brand/industry
@@ -185,7 +222,7 @@ Return ONLY the JSON array, no other text.`, { max_tokens: 500 })
     const brandContext = brandNames.length > 0 ? brandNames.join(', ') : website
     
     try {
-      const response = await queryAI('openai/gpt-4o-mini', `You are an AI search optimization expert. Generate 10 highly relevant topics for tracking AI search visibility.
+      const result = await queryAI('openai/gpt-4o-mini', `You are an AI search optimization expert. Generate 10 highly relevant topics for tracking AI search visibility.
 
 Brand/Website: ${brandContext || website}
 Industry: ${industry}
@@ -205,9 +242,13 @@ Return ONLY a JSON array with exactly 10 topic objects:
 
 Categories should be one of: "Products", "Services", "Comparisons", "Reviews", "How-to", "Industry"
 
-Return ONLY the JSON array.`, { max_tokens: 800 })
+Return ONLY the JSON array.`)
 
-      const jsonMatch = response.match(/\[[\s\S]*\]/)
+      if (!result.success) {
+        throw new Error(result.error || 'AI request failed')
+      }
+
+      const jsonMatch = result.response.match(/\[[\s\S]*\]/)
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0])
         const topicsWithIds = parsed.map((t, i) => ({
@@ -220,18 +261,20 @@ Return ONLY the JSON array.`, { max_tokens: 800 })
         const counts = {}
         topicsWithIds.forEach(t => { counts[t.id] = promptsPerTopic })
         setTopicPromptCounts(counts)
+      } else {
+        throw new Error('Could not parse topics')
       }
     } catch (err) {
       console.error('Error generating topics:', err)
-      // Demo topics relevant to digital marketing
+      // Fallback topics based on brand/industry
       const demoTopics = [
-        { id: 'topic-1', name: `${industry} services`, description: `General ${industry.toLowerCase()} services`, category: 'Services' },
+        { id: 'topic-1', name: `${brandNames[0] || industry} services`, description: `General services offered`, category: 'Services' },
         { id: 'topic-2', name: `Best ${industry.toLowerCase()} agencies`, description: 'Agency comparison and reviews', category: 'Comparisons' },
         { id: 'topic-3', name: `${brandNames[0] || 'Brand'} reviews`, description: 'Brand reviews and testimonials', category: 'Reviews' },
         { id: 'topic-4', name: `${industry} tools`, description: 'Tools and software in the industry', category: 'Products' },
         { id: 'topic-5', name: `How to choose ${industry.toLowerCase()}`, description: 'Decision guides', category: 'How-to' },
         { id: 'topic-6', name: `${industry} pricing`, description: 'Pricing and cost information', category: 'Services' },
-        { id: 'topic-7', name: `${industry} trends`, description: 'Industry trends and insights', category: 'Industry' },
+        { id: 'topic-7', name: `${industry} trends 2025`, description: 'Current industry trends', category: 'Industry' },
         { id: 'topic-8', name: `${industry} for small business`, description: 'Solutions for SMBs', category: 'Services' },
         { id: 'topic-9', name: `${industry} ROI`, description: 'Return on investment discussions', category: 'How-to' },
         { id: 'topic-10', name: `Enterprise ${industry.toLowerCase()}`, description: 'Enterprise solutions', category: 'Services' },
@@ -260,7 +303,7 @@ Return ONLY the JSON array.`, { max_tokens: 800 })
 
     for (const topic of selectedTopicNames) {
       try {
-        const response = await queryAI('openai/gpt-4o-mini', `Generate ${topicPromptCounts[topic.id] || promptsPerTopic} search prompts for AI visibility tracking.
+        const result = await queryAI('openai/gpt-4o-mini', `Generate ${topicPromptCounts[topic.id] || promptsPerTopic} search prompts for AI visibility tracking.
 
 Topic: ${topic.name}
 Brand: ${brandContext}
@@ -281,18 +324,20 @@ Return ONLY a JSON array:
   }
 ]
 
-Make prompts diverse across types, personas, and intents. Return ONLY JSON.`, { max_tokens: 1500 })
+Make prompts diverse across types, personas, and intents. Return ONLY JSON.`)
 
-        const jsonMatch = response.match(/\[[\s\S]*\]/)
-        if (jsonMatch) {
-          const parsed = JSON.parse(jsonMatch[0])
-          const promptsWithMeta = parsed.map((p, i) => ({
-            ...p,
-            id: `${topic.id}-prompt-${i + 1}`,
-            topicId: topic.id,
-            topicName: topic.name
-          }))
-          allPrompts.push(...promptsWithMeta)
+        if (result.success) {
+          const jsonMatch = result.response.match(/\[[\s\S]*\]/)
+          if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0])
+            const promptsWithMeta = parsed.map((p, i) => ({
+              ...p,
+              id: `${topic.id}-prompt-${i + 1}`,
+              topicId: topic.id,
+              topicName: topic.name
+            }))
+            allPrompts.push(...promptsWithMeta)
+          }
         }
       } catch (err) {
         console.error('Error generating prompts for topic:', topic.name, err)
@@ -649,10 +694,27 @@ Make prompts diverse across types, personas, and intents. Return ONLY JSON.`, { 
                   <p className="text-white/60">Finding your competitors...</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  {/* Error message */}
+                  {error && (
+                    <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg text-amber-400 text-sm flex items-center justify-between">
+                      <span>{error}</span>
+                      <button 
+                        onClick={() => { setError(''); generateCompetitors(); }}
+                        className="px-3 py-1 bg-amber-500/20 rounded hover:bg-amber-500/30"
+                      >
+                        Retry
+                      </button>
+                    </div>
+                  )}
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Selected Competitors */}
                   <div>
                     <div className="flex flex-wrap gap-2 p-4 bg-white/5 rounded-xl border border-white/10 min-h-[120px]">
+                      {competitors.length === 0 && !error && (
+                        <p className="text-white/40 text-sm">No competitors found. Add them manually below.</p>
+                      )}
                       {competitors.map(comp => (
                         <span key={comp.domain} className="inline-flex items-center gap-2 px-3 py-2 bg-white/10 rounded-lg">
                           <span className="text-white">{comp.domain}</span>
@@ -684,6 +746,7 @@ Make prompts diverse across types, personas, and intents. Return ONLY JSON.`, { 
                   </div>
 
                   {/* Traffic Data */}
+                  {competitors.length > 0 && (
                   <div className="bg-white/5 rounded-xl p-4 border border-white/10">
                     <p className="text-sm text-white/50 mb-4">Here's who we found, and their monthly traffic:</p>
                     <div className="space-y-3">
@@ -703,6 +766,8 @@ Make prompts diverse across types, personas, and intents. Return ONLY JSON.`, { 
                       ))}
                     </div>
                   </div>
+                  )}
+                </div>
                 </div>
               )}
             </div>
