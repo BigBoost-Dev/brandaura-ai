@@ -8,7 +8,6 @@ import Header from '../components/Header'
 import Sidebar from '../components/Sidebar'
 import MetricCard from '../components/MetricCard'
 import PlatformCard from '../components/PlatformCard'
-import BrandSetup from '../components/BrandSetup'
 import TopicTrackingWizard from '../components/TopicTrackingWizard'
 import VisibilityDashboard from '../components/VisibilityDashboard'
 import CompetitorDashboard from '../components/CompetitorDashboard'
@@ -21,7 +20,6 @@ export default function Dashboard() {
   const { loadResults, addResults, getResults } = useResultsStore()
   const { activeTab, setActiveTab, isTestRunning, setTestRunning, testProgress, setTestProgress, addLog } = useUIStore()
   
-  const [showSetup, setShowSetup] = useState(false)
   const [showTopicWizard, setShowTopicWizard] = useState(false)
   const [metrics, setMetrics] = useState(null)
   const [selectedPlatforms, setSelectedPlatforms] = useState([])
@@ -58,7 +56,7 @@ export default function Dashboard() {
   }, [brandResults, activeBrand])
 
   useEffect(() => {
-    if (!authLoading && brands.length === 0) setShowSetup(true)
+    if (!authLoading && brands.length === 0) setShowTopicWizard(true)
   }, [brands, authLoading])
 
   const stopTests = useCallback(() => {
@@ -140,7 +138,6 @@ export default function Dashboard() {
   }, [isTestRunning, activeBrand, user, selectedPlatforms, addLog, setTestProgress, setTestRunning, addResults])
 
   if (authLoading) return <div className="min-h-screen bg-dark-400 flex items-center justify-center"><div className="spinner w-8 h-8" /></div>
-  if (showSetup) return <BrandSetup userId={user?.id} onComplete={() => setShowSetup(false)} onCancel={brands.length > 0 ? () => setShowSetup(false) : null} />
 
   return (
     <div className="min-h-screen bg-dark-400 text-white">
@@ -152,7 +149,7 @@ export default function Dashboard() {
             setShowTopicWizard(false)
             loadBrands(user.id)
           }}
-          onCancel={() => setShowTopicWizard(false)}
+          onCancel={brands.length > 0 ? () => setShowTopicWizard(false) : null}
           existingBrands={brands}
         />
       )}
@@ -163,7 +160,7 @@ export default function Dashboard() {
         brands={brands} 
         activeBrandId={activeBrandId}
         onBrandChange={setActiveBrand} 
-        onAddBrand={() => setShowSetup(true)} 
+        onAddBrand={() => setShowTopicWizard(true)} 
         onSignOut={signOut}
         isRunning={isTestRunning} 
         progress={testProgress} 

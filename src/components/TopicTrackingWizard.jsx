@@ -612,8 +612,8 @@ Return ONLY a JSON array with this structure:
   }, [selectedTopics, topicPromptCounts, promptsPerTopic])
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
-      <div className="w-full max-w-4xl my-4 bg-[#1a1a1f] rounded-2xl border border-white/10 flex flex-col max-h-[calc(100vh-2rem)] overflow-hidden">
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-start justify-center p-4 overflow-y-auto">
+      <div className="w-full max-w-4xl my-auto bg-[#1a1a1f] rounded-2xl border border-white/10 flex flex-col max-h-[calc(100vh-2rem)] overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 flex-shrink-0">
           <h2 className="text-xl font-bold">Track Topic Performance</h2>
@@ -672,110 +672,184 @@ Return ONLY a JSON array with this structure:
           {currentStep === 1 && (
             <div className="space-y-6">
               <div className="text-center mb-8">
-                <h3 className="text-2xl font-bold text-white/90">Websites and Brands</h3>
-                <p className="text-white/50 mt-2">Select the website you would like to track and the configured brands associated with it.</p>
+                <h3 className="text-2xl font-bold text-white/90">
+                  {existingBrands.length > 0 ? 'Select or Add Brand' : 'Set Up Your Brand'}
+                </h3>
+                <p className="text-white/50 mt-2">
+                  {existingBrands.length > 0 
+                    ? 'Choose an existing brand to track topics for, or add a new one.'
+                    : 'Enter your website and brand information to get started.'}
+                </p>
               </div>
 
-              <div className="space-y-6">
-                <div>
-                  <label className="block text-sm font-medium text-white/70 mb-2">Website</label>
-                  <input
-                    type="text"
-                    value={website}
-                    onChange={(e) => setWebsite(e.target.value)}
-                    placeholder="e.g., bigboost.agency"
-                    className="input"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-white/70 mb-2">
-                    Brand names associated with your website:
-                    <button className="ml-2 text-white/40 hover:text-white/60">
-                      <svg className="w-4 h-4 inline" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
-                      </svg>
+              {/* Existing Brands Selection */}
+              {existingBrands.length > 0 && (
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-white/70 mb-3">Your Brands</label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {existingBrands.map(brand => (
+                      <button
+                        key={brand.id}
+                        onClick={() => {
+                          setSelectedWebsite(brand)
+                          setWebsite(brand.website || '')
+                          setBrandNames(brand.brand_names || [brand.name])
+                          setIndustry(brand.industry || 'Digital Marketing')
+                          setCompetitors(brand.competitors || [])
+                        }}
+                        className={`p-4 rounded-xl border text-left transition-all ${
+                          selectedWebsite?.id === brand.id
+                            ? 'bg-primary-500/20 border-primary-500 ring-2 ring-primary-500/50'
+                            : 'bg-white/5 border-white/10 hover:border-white/30'
+                        }`}
+                      >
+                        <div className="font-medium text-white">{brand.name}</div>
+                        <div className="text-sm text-white/50 mt-1">{brand.website || 'No website'}</div>
+                        {brand.industry && (
+                          <div className="text-xs text-white/40 mt-1">{brand.industry}</div>
+                        )}
+                      </button>
+                    ))}
+                    <button
+                      onClick={() => {
+                        setSelectedWebsite(null)
+                        setWebsite('')
+                        setBrandNames([])
+                        setIndustry('Digital Marketing')
+                        setCompetitors([])
+                      }}
+                      className={`p-4 rounded-xl border text-left transition-all ${
+                        selectedWebsite === null && existingBrands.length > 0
+                          ? 'bg-[#4a9d7c]/20 border-[#4a9d7c] ring-2 ring-[#4a9d7c]/50'
+                          : 'bg-white/5 border-white/10 border-dashed hover:border-[#4a9d7c]/50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 text-[#4a9d7c]">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                        <span className="font-medium">Add New Brand</span>
+                      </div>
+                      <div className="text-sm text-white/40 mt-1">Create a new brand to track</div>
                     </button>
-                  </label>
-                  <div className="flex gap-2 mb-3">
-                    <div className="flex-1 flex flex-wrap gap-2 p-3 bg-white/5 rounded-xl border border-white/10 min-h-[50px]">
-                      {brandNames.map(brand => (
+                  </div>
+                </div>
+              )}
+
+              {/* New Brand Form - Show when no existing brands OR "Add New" is selected */}
+              {(existingBrands.length === 0 || selectedWebsite === null) && (
+                <div className="space-y-6">
+                  <div>
+                    <label className="block text-sm font-medium text-white/70 mb-2">Website</label>
+                    <input
+                      type="text"
+                      value={website}
+                      onChange={(e) => setWebsite(e.target.value)}
+                      placeholder="e.g., bigboost.agency"
+                      className="input"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-white/70 mb-2">
+                      Brand names associated with your website:
+                      <button className="ml-2 text-white/40 hover:text-white/60">
+                        <svg className="w-4 h-4 inline" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                        </svg>
+                      </button>
+                    </label>
+                    <div className="flex gap-2 mb-3">
+                      <div className="flex-1 flex flex-wrap gap-2 p-3 bg-white/5 rounded-xl border border-white/10 min-h-[50px]">
+                        {brandNames.map(brand => (
+                          <span
+                            key={brand}
+                            className="inline-flex items-center gap-1 px-3 py-1 bg-[#4a9d7c]/20 text-[#4a9d7c] rounded-lg text-sm"
+                          >
+                            {brand}
+                            <button onClick={() => handleRemoveBrand(brand)} className="hover:text-white">×</button>
+                          </span>
+                        ))}
+                        <input
+                          type="text"
+                          value={brandInput}
+                          onChange={(e) => setBrandInput(e.target.value)}
+                          onKeyPress={(e) => e.key === 'Enter' && handleAddBrand()}
+                          placeholder="Enter brand names, separated by commas."
+                          className="flex-1 min-w-[200px] bg-transparent border-none outline-none text-white placeholder:text-white/30"
+                        />
+                      </div>
+                      <button
+                        onClick={handleAddBrand}
+                        className="px-4 py-2 bg-[#4a9d7c] hover:bg-[#3d8268] text-white rounded-xl font-medium transition-colors"
+                      >
+                        Save
+                      </button>
+                      <button className="px-3 py-2 text-white/40 hover:text-white/60">
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-white/70 mb-2">Industry</label>
+                    <select
+                      value={industry}
+                      onChange={(e) => setIndustry(e.target.value)}
+                      className="input"
+                    >
+                      {Object.keys(INDUSTRY_BENCHMARKS).map(ind => (
+                        <option key={ind} value={ind}>{ind}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-white/70 mb-2">
+                      Competitors (optional, max 5)
+                    </label>
+                    <div className="flex flex-wrap gap-2 p-3 bg-white/5 rounded-xl border border-white/10 min-h-[50px]">
+                      {competitors.map(comp => (
                         <span
-                          key={brand}
-                          className="inline-flex items-center gap-1 px-3 py-1 bg-[#4a9d7c]/20 text-[#4a9d7c] rounded-lg text-sm"
+                          key={comp}
+                          className="inline-flex items-center gap-1 px-3 py-1 bg-white/10 text-white/80 rounded-lg text-sm"
                         >
-                          {brand}
-                          <button onClick={() => handleRemoveBrand(brand)} className="hover:text-white">×</button>
+                          {comp}
+                          <button onClick={() => handleRemoveCompetitor(comp)} className="hover:text-white">×</button>
                         </span>
                       ))}
-                      <input
-                        type="text"
-                        value={brandInput}
-                        onChange={(e) => setBrandInput(e.target.value)}
-                        onKeyPress={(e) => e.key === 'Enter' && handleAddBrand()}
-                        placeholder="Enter brand names, separated by commas."
-                        className="flex-1 min-w-[200px] bg-transparent border-none outline-none text-white placeholder:text-white/30"
-                      />
+                      {competitors.length < 5 && (
+                        <input
+                          type="text"
+                          value={competitorInput}
+                          onChange={(e) => setCompetitorInput(e.target.value)}
+                          onKeyPress={(e) => e.key === 'Enter' && handleAddCompetitor()}
+                          placeholder="Add competitor domain"
+                          className="flex-1 min-w-[200px] bg-transparent border-none outline-none text-white placeholder:text-white/30"
+                        />
+                      )}
                     </div>
-                    <button
-                      onClick={handleAddBrand}
-                      className="px-4 py-2 bg-[#4a9d7c] hover:bg-[#3d8268] text-white rounded-xl font-medium transition-colors"
-                    >
-                      Save
-                    </button>
-                    <button className="px-3 py-2 text-white/40 hover:text-white/60">
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-white/70 mb-2">Industry</label>
-                  <select
-                    value={industry}
-                    onChange={(e) => setIndustry(e.target.value)}
-                    className="input"
-                  >
-                    {Object.keys(INDUSTRY_BENCHMARKS).map(ind => (
-                      <option key={ind} value={ind}>{ind}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-white/70 mb-2">
-                    Competitors (optional, max 5)
-                  </label>
-                  <div className="flex flex-wrap gap-2 p-3 bg-white/5 rounded-xl border border-white/10 min-h-[50px]">
-                    {competitors.map(comp => (
-                      <span
-                        key={comp}
-                        className="inline-flex items-center gap-1 px-3 py-1 bg-white/10 text-white/80 rounded-lg text-sm"
-                      >
-                        {comp}
-                        <button onClick={() => handleRemoveCompetitor(comp)} className="hover:text-white">×</button>
-                      </span>
-                    ))}
-                    {competitors.length < 5 && (
-                      <input
-                        type="text"
-                        value={competitorInput}
-                        onChange={(e) => setCompetitorInput(e.target.value)}
-                        onKeyPress={(e) => e.key === 'Enter' && handleAddCompetitor()}
-                        placeholder="Add competitor domain"
-                        className="flex-1 min-w-[200px] bg-transparent border-none outline-none text-white placeholder:text-white/30"
-                      />
+                    {competitors.length >= 5 && (
+                      <p className="text-sm text-amber-400 mt-2">Maximum of 5 reached</p>
                     )}
                   </div>
-                  {competitors.length >= 5 && (
-                    <p className="text-sm text-amber-400 mt-2">Maximum of 5 reached</p>
-                  )}
                 </div>
+              )}
 
-                <div className="p-4 bg-white/5 rounded-xl border border-white/10 text-center text-white/40 text-sm">
-                  Configured tracked brands will appear here.
+              {/* Selected Brand Summary - Show when existing brand is selected */}
+              {selectedWebsite && (
+                <div className="p-4 bg-primary-500/10 rounded-xl border border-primary-500/30">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-primary-500/20 flex items-center justify-center">
+                      <span className="text-primary-400 font-bold">{selectedWebsite.name?.charAt(0) || 'B'}</span>
+                    </div>
+                    <div>
+                      <div className="font-medium text-white">{selectedWebsite.name}</div>
+                      <div className="text-sm text-white/50">{selectedWebsite.website || 'No website configured'}</div>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           )}
 
