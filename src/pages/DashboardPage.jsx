@@ -658,6 +658,20 @@ function ResultsView({ results }) {
     )
   }
 
+  // Helper to get response text from various possible fields
+  const getResponseText = (result) => {
+    return result.response_text || result.full_response || result.response || result.snippet || null
+  }
+
+  // Helper to get valid sources (with URLs)
+  const getValidSources = (result) => {
+    if (!Array.isArray(result.sources)) return []
+    return result.sources.filter(src => {
+      const url = typeof src === 'string' ? src : src?.url
+      return url && url.startsWith('http')
+    })
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -665,59 +679,75 @@ function ResultsView({ results }) {
         <span className="text-[13px] text-white/40">{results.length} total</span>
       </div>
       <div className="space-y-3">
-        {results.slice(0, 50).map((result, i) => (
-          <BentoCard key={i} size="small" className="cursor-pointer hover:border-white/[0.12] transition">
-            <div 
-              className="flex items-start justify-between gap-4"
-              onClick={() => setExpandedResult(expandedResult === i ? null : i)}
-            >
-              <div className="flex-1 min-w-0">
-                <p className="text-[14px] text-white/80">{result.query}</p>
-                <p className="text-[12px] text-white/40 mt-1">{result.platform} • {result.model} • {new Date(result.created_at).toLocaleDateString()}</p>
+        {results.slice(0, 50).map((result, i) => {
+          const responseText = getResponseText(result)
+          const validSources = getValidSources(result)
+          
+          return (
+            <BentoCard key={result.id || i} size="small" className="cursor-pointer hover:border-white/[0.12] transition">
+              <div 
+                className="flex items-start justify-between gap-4"
+                onClick={() => setExpandedResult(expandedResult === i ? null : i)}
+              >
+                <div className="flex-1 min-w-0">
+                  <p className="text-[14px] text-white/80">{result.query}</p>
+                  <p className="text-[12px] text-white/40 mt-1">{result.platform_name || result.platform_id} • {result.model} • {new Date(result.created_at).toLocaleDateString()}</p>
+                </div>
+                <span className={`px-2.5 py-1 rounded-lg text-[12px] font-medium flex-shrink-0 ${
+                  result.mention_type === 'leader' ? 'bg-emerald-500/10 text-emerald-400' :
+                  result.mention_type === 'mentioned' || result.mention_type === 'recommended' ? 'bg-amber-500/10 text-amber-400' :
+                  'bg-white/[0.05] text-white/40'
+                }`}>
+                  {result.mention_type === 'leader' ? 'Top Pick' : 
+                   result.mention_type === 'recommended' ? 'Recommended' :
+                   result.mention_type === 'mentioned' ? 'Mentioned' : 'Not Found'}
+                </span>
               </div>
-              <span className={`px-2.5 py-1 rounded-lg text-[12px] font-medium flex-shrink-0 ${
-                result.mention_type === 'leader' ? 'bg-emerald-500/10 text-emerald-400' :
-                result.mention_type === 'mentioned' ? 'bg-amber-500/10 text-amber-400' :
-                'bg-white/[0.05] text-white/40'
-              }`}>
-                {result.mention_type === 'leader' ? 'Top Pick' : 
-                 result.mention_type === 'mentioned' ? 'Mentioned' : 'Not Found'}
-              </span>
-            </div>
-            
-            {/* Expanded View */}
-            {expandedResult === i && (
-              <div className="mt-4 pt-4 border-t border-white/[0.06]">
-                <div className="mb-3">
-                  <span className="text-[11px] text-white/30 uppercase tracking-wide">AI Response</span>
-                </div>
-                <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.04] max-h-64 overflow-y-auto">
-                  <p className="text-[13px] text-white/60 leading-relaxed whitespace-pre-wrap">
-                    {result.response || result.raw_response || 'No response content available'}
-                  </p>
-                </div>
-                {Array.isArray(result.sources) && result.sources.length > 0 && (
-                  <div className="mt-3">
-                    <span className="text-[11px] text-white/30 uppercase tracking-wide">Sources Cited</span>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {result.sources.map((src, j) => (
-                        <a 
-                          key={j} 
-                          href={typeof src === 'string' ? src : src.url || '#'} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-[12px] text-amber-400/70 hover:text-amber-400 truncate max-w-[200px]"
-                        >
-                          {typeof src === 'string' ? src : src.name || src.url || 'Source'}
-                        </a>
-                      ))}
-                    </div>
+              
+              {/* Expanded View */}
+              {expandedResult === i && (
+                <div className="mt-4 pt-4 border-t border-white/[0.06]">
+                  <div className="mb-3">
+                    <span className="text-[11px] text-white/30 uppercase tracking-wide">AI Response</span>
                   </div>
-                )}
-              </div>
-            )}
-          </BentoCard>
-        ))}
+                  <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.04] max-h-64 overflow-y-auto">
+                    {responseText ? (
+                      <p className="text-[13px] text-white/60 leading-relaxed whitespace-pre-wrap">
+                        {responseText}
+                      </p>
+                    ) : (
+                      <p className="text-[13px] text-white/40 italic">
+                        Response not stored. Check database column 'response_text' or 'full_response'.
+                      </p>
+                    )}
+                  </div>
+                  {validSources.length > 0 && (
+                    <div className="mt-3">
+                      <span className="text-[11px] text-white/30 uppercase tracking-wide">Sources Cited</span>
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {validSources.map((src, j) => {
+                          const url = typeof src === 'string' ? src : src.url
+                          const name = typeof src === 'string' ? new URL(src).hostname : (src.name || new URL(src.url).hostname)
+                          return (
+                            <a 
+                              key={j} 
+                              href={url} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-[12px] text-amber-400/70 hover:text-amber-400"
+                            >
+                              {name}
+                            </a>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </BentoCard>
+          )
+        })}
       </div>
     </div>
   )

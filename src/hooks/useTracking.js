@@ -19,7 +19,22 @@ export function useTracking() {
   }, [])
 
   const runTracking = useCallback(async (brand, userId) => {
-    if (isRunning || !brand || !userId) return
+    console.log('[runTracking] CALLED with:', { brandName: brand?.name, brandId: brand?.id, userId, isRunning })
+    
+    if (isRunning) {
+      console.log('[runTracking] BLOCKED - already running')
+      return
+    }
+    if (!brand) {
+      console.log('[runTracking] BLOCKED - no brand')
+      return
+    }
+    if (!userId) {
+      console.log('[runTracking] BLOCKED - no userId')
+      return
+    }
+    
+    console.log('[runTracking] PASSED initial checks, continuing...')
     
     // Parse settings if it's a JSON string
     let settings = brand.settings || {}
@@ -91,6 +106,8 @@ export function useTracking() {
             if (abortRef.current?.signal.aborted) break
 
             if (success && response) {
+              console.log(`[Loop] Response received, length: ${response?.length || 0}`)
+              
               // Parse competitors if it's a JSON string
               let parsedCompetitors = brand.competitors || []
               if (typeof parsedCompetitors === 'string') {
@@ -123,14 +140,15 @@ export function useTracking() {
                 topic_id: prompt.topicId || null,
                 topic_name: prompt.topicName || topic.name || 'General',
                 response_text: response,
+                full_response: response,
                 brand_mentioned: analysis.brandMention !== 'notMentioned',
                 mention_type: analysis.brandMention,
                 brand_position: analysis.brandPosition,
                 mention_count: analysis.mentionCount,
                 sentiment: analysis.sentiment,
                 confidence_score: analysis.confidence,
-                competitor_mentions: analysis.competitorMentions,
-                cited_urls: analysis.citedUrls,
+                competitor_mentions: analysis.competitorMentions || {},
+                cited_urls: analysis.citedUrls || [],
                 sources: sources,
                 snippet: analysis.snippet,
                 word_count: analysis.wordCount,
@@ -169,32 +187,43 @@ export function useTracking() {
       console.log(`[Loop] EXITED - collected ${results.length} results`)
       
       if (results.length > 0) {
-        try {
-          console.log(`[Loop] Saving ${results.length} results to database...`)
-          addLog(`💾 Saving ${results.length} results...`, 'info')
+        console.log(`[Loop] Saving ${results.length} results to database...`)
+        console.log(`[Loop] First result response_text length: ${results[0]?.response_text?.length || 'null'}`)
+        console.log(`[Loop] First result full_response length: ${results[0]?.full_response?.length || 'null'}`)
+        addLog(`💾 Saving ${results.length} results...`, 'info')
+        
+        // Save in batches of 10 to avoid payload size issues
+        const BATCH_SIZE = 10
+        let savedCount = 0
+        
+        for (let i = 0; i < results.length; i += BATCH_SIZE) {
+          const batch = results.slice(i, i + BATCH_SIZE)
+          const batchNum = Math.floor(i/BATCH_SIZE) + 1
+          const totalBatches = Math.ceil(results.length/BATCH_SIZE)
+          console.log(`[Loop] Saving batch ${batchNum}/${totalBatches} (${batch.length} items)`)
           
-          // Save in batches of 20 to avoid payload size issues
-          const BATCH_SIZE = 20
-          let savedCount = 0
-          
-          for (let i = 0; i < results.length; i += BATCH_SIZE) {
-            const batch = results.slice(i, i + BATCH_SIZE)
-            console.log(`[Loop] Saving batch ${Math.floor(i/BATCH_SIZE) + 1}/${Math.ceil(results.length/BATCH_SIZE)} (${batch.length} items)`)
+          try {
+            // Add timeout wrapper for the save operation
+            const savePromise = addResults(brand.id, batch)
+            const timeoutPromise = new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Save timeout after 30s')), 30000)
+            )
             
-            try {
-              await addResults(brand.id, batch)
-              savedCount += batch.length
-            } catch (batchErr) {
-              console.error(`[Loop] Batch save error:`, batchErr)
-              addLog(`⚠️ Failed to save batch: ${batchErr.message}`, 'warning')
-            }
+            await Promise.race([savePromise, timeoutPromise])
+            savedCount += batch.length
+            console.log(`[Loop] Batch ${batchNum} saved successfully`)
+          } catch (batchErr) {
+            console.error(`[Loop] Batch ${batchNum} save error:`, batchErr)
+            console.error(`[Loop] Error details:`, JSON.stringify(batchErr, null, 2))
+            addLog(`⚠️ Failed to save batch ${batchNum}: ${batchErr.message}`, 'warning')
           }
-          
-          console.log(`[Loop] Saved ${savedCount}/${results.length} results`)
+        }
+        
+        console.log(`[Loop] Save complete: ${savedCount}/${results.length} results`)
+        if (savedCount > 0) {
           addLog(`✅ Saved ${savedCount} results to database`, 'success')
-        } catch (err) {
-          console.error(`[Loop] Save error:`, err)
-          addLog(`❌ Failed to save results: ${err.message}`, 'error')
+        } else {
+          addLog(`❌ Failed to save any results`, 'error')
         }
       } else {
         console.log(`[Loop] No results to save`)
