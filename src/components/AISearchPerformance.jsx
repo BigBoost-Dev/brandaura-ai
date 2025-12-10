@@ -81,7 +81,7 @@ export default function AISearchPerformance({ results = [], brand }) {
   ]
 
   return (
-    <div className="space-y-6 max-w-6xl">
+    <div className="space-y-6 ">
       <div>
         <h2 className="text-xl font-semibold text-white">AI Search Performance</h2>
         <p className="text-[14px] text-white/40 mt-1">How your brand performs across different AI search engines</p>

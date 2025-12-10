@@ -111,7 +111,7 @@ export default function Dashboard() {
         hasTrackingConfig={hasTrackingConfig}
       />
 
-      <div className="flex">
+      <div className="min-h-[calc(100vh-56px)]">
         <Sidebar 
           activeTab={activeTab} 
           onTabChange={setActiveTab} 
@@ -120,7 +120,8 @@ export default function Dashboard() {
           onClose={() => setSidebarOpen(false)}
         />
         
-        <main className="flex-1 p-6 lg:p-8 max-w-7xl mx-auto ml-[52px]">
+        <main className="ml-[52px] p-6 lg:p-8">
+          <div className="max-w-[1400px] mx-auto w-full">
           {activeTab === 'dashboard' && (
             <DashboardView 
               metrics={metrics} 
@@ -196,6 +197,7 @@ export default function Dashboard() {
               onSave={() => loadBrands(user.id)}
             />
           )}
+          </div>
         </main>
       </div>
     </div>

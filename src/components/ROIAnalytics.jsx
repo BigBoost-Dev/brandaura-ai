@@ -116,7 +116,7 @@ export default function ROIAnalytics({ results = [], brand }) {
   }
 
   return (
-    <div className="space-y-6 max-w-6xl">
+    <div className="space-y-6 ">
       <div>
         <h2 className="text-xl font-semibold text-white">ROI Estimates</h2>
         <p className="text-[14px] text-white/40 mt-1">Conservative projections based on your AI visibility</p>

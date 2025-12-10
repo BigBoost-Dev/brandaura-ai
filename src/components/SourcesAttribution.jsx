@@ -77,7 +77,7 @@ export default function SourcesAttribution({ results = [], brand }) {
   }
 
   return (
-    <div className="space-y-6 max-w-6xl">
+    <div className="space-y-6 ">
       <div>
         <h2 className="text-xl font-semibold text-white">Source Attribution</h2>
         <p className="text-[14px] text-white/40 mt-1">See which sources AI uses to learn about your brand</p>

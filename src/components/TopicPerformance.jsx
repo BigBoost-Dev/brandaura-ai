@@ -61,7 +61,7 @@ export default function TopicPerformance({ results = [], topics = [], brand, com
   }
 
   return (
-    <div className="space-y-6 max-w-6xl">
+    <div className="space-y-6 ">
       <div>
         <h2 className="text-xl font-semibold text-white">Topic Performance</h2>
         <p className="text-[14px] text-white/40 mt-1">See how your brand performs across different topics</p>
