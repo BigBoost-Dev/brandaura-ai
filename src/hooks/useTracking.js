@@ -50,13 +50,14 @@ export function useTracking() {
     setLogs(prev => prev.slice(-2)) // Keep auth logs
     
     const totalQueries = prompts.length * engines.length
-    setProgress({ current: 0, total: totalQueries, percentage: 0, prompt: '', engine: '' })
-    addLog(`🚀 Starting tracking for ${brand.name}`, 'info')
-    addLog(`📋 ${prompts.length} prompts × ${engines.length} engines = ${totalQueries} queries`, 'info')
-
     const results = []
     const batchId = Date.now().toString()
     let queryIndex = 0
+
+    try {
+      setProgress({ current: 0, total: totalQueries, percentage: 0, prompt: '', engine: '' })
+      addLog(`🚀 Starting tracking for ${brand.name}`, 'info')
+      addLog(`📋 ${prompts.length} prompts × ${engines.length} engines = ${totalQueries} queries`, 'info')
 
     for (const prompt of prompts) {
       if (abortRef.current?.signal.aborted) break
@@ -155,8 +156,8 @@ export function useTracking() {
           addLog(`❌ ${engine.name}: ${err.message}`, 'error')
         }
 
-        // Delay between queries
-        if (!abortRef.current?.signal.aborted) {
+        // Delay between queries (skip on last iteration)
+        if (!abortRef.current?.signal.aborted && queryIndex < totalQueries) {
           console.log(`[Loop] Waiting 2s...`)
           await new Promise(r => setTimeout(r, 2000))
           console.log(`[Loop] Continuing...`)
@@ -164,18 +165,56 @@ export function useTracking() {
       }
     }
 
-    // Save results
+    // ===== POST-LOOP: Save results =====
+    console.log(`[Loop] EXITED - collected ${results.length} results`)
+    
     if (results.length > 0) {
       try {
-        await addResults(brand.id, results)
-        addLog(`✅ Saved ${results.length} results`, 'success')
+        console.log(`[Loop] Saving ${results.length} results to database...`)
+        addLog(`💾 Saving ${results.length} results...`, 'info')
+        
+        // Save in batches of 20 to avoid payload size issues
+        const BATCH_SIZE = 20
+        let savedCount = 0
+        
+        for (let i = 0; i < results.length; i += BATCH_SIZE) {
+          const batch = results.slice(i, i + BATCH_SIZE)
+          console.log(`[Loop] Saving batch ${Math.floor(i/BATCH_SIZE) + 1}/${Math.ceil(results.length/BATCH_SIZE)} (${batch.length} items)`)
+          
+          try {
+            await addResults(brand.id, batch)
+            savedCount += batch.length
+          } catch (batchErr) {
+            console.error(`[Loop] Batch save error:`, batchErr)
+            addLog(`⚠️ Failed to save batch: ${batchErr.message}`, 'warning')
+          }
+        }
+        
+        console.log(`[Loop] Saved ${savedCount}/${results.length} results`)
+        addLog(`✅ Saved ${savedCount} results to database`, 'success')
       } catch (err) {
-        addLog(`❌ Failed to save: ${err.message}`, 'error')
+        console.error(`[Loop] Save error:`, err)
+        addLog(`❌ Failed to save results: ${err.message}`, 'error')
       }
+    } else {
+      console.log(`[Loop] No results to save`)
+      addLog(`⚠️ No successful responses to save`, 'warning')
     }
 
-    setIsRunning(false)
-    addLog('🏁 Tracking complete', 'success')
+    console.log(`[Loop] Setting isRunning=false`)
+    setProgress({ current: totalQueries, total: totalQueries, percentage: 100, prompt: 'Complete', engine: '' })
+    addLog('🏁 Tracking complete!', 'success')
+    
+    } catch (fatalError) {
+      // Catch any unexpected errors that might crash the tracking
+      console.error(`[Loop] FATAL ERROR:`, fatalError)
+      addLog(`❌ Unexpected error: ${fatalError.message}`, 'error')
+    } finally {
+      // Always cleanup
+      console.log(`[Loop] FINALLY - cleanup`)
+      setIsRunning(false)
+      abortRef.current = null
+    }
   }, [isRunning, addLog, addResults])
 
   const stopTracking = useCallback(() => {
