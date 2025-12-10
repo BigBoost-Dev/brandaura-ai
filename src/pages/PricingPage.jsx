@@ -36,7 +36,7 @@ export default function PricingPage() {
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <Link to="/" className="flex items-center gap-3">
             <Logo size={32} />
-            <span className="text-[17px] font-semibold tracking-tight text-white">BrandAura</span>
+            <span className="text-[17px] font-semibold tracking-tight text-white">BigRank AI</span>
           </Link>
           <div className="flex items-center gap-4">
             <Link to="/login" className="text-[14px] text-white/50 hover:text-white transition-colors">
@@ -253,9 +253,9 @@ export default function PricingPage() {
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div className="flex items-center gap-3">
             <Logo size={24} />
-            <span className="font-medium text-[14px] text-white/70">BrandAura</span>
+            <span className="font-medium text-[14px] text-white/70">BigRank AI</span>
           </div>
-          <div className="text-white/30 text-[13px]">© 2025 BrandAura. All rights reserved.</div>
+          <div className="text-white/30 text-[13px]">© 2025 BigRank AI. All rights reserved.</div>
         </div>
       </footer>
     </div>

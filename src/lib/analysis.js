@@ -1,5 +1,5 @@
 /**
- * Advanced Analysis Utilities for BrandAura AI
+ * Advanced Analysis Utilities for BigRank AI
  * - Source Attribution
  * - Content Scoring
  * - Optimization Recommendations

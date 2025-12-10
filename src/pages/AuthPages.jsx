@@ -172,7 +172,7 @@ export function LoginPage() {
       <header className="relative z-10 p-6 flex items-center justify-between">
         <Link to="/" className="inline-flex items-center gap-3">
           <Logo size={28} />
-          <span className="font-semibold text-[15px] tracking-tight text-white">BrandAura</span>
+          <span className="font-semibold text-[15px] tracking-tight text-white">BigRank AI</span>
         </Link>
         <Link to="/signup" className="text-[14px] text-white/50 hover:text-white transition-colors">
           Create account
@@ -356,7 +356,7 @@ export function SignupPage() {
         <header className="relative z-10 p-6">
           <Link to="/" className="inline-flex items-center gap-3">
             <Logo size={28} />
-            <span className="font-semibold text-[15px] tracking-tight text-white">BrandAura</span>
+            <span className="font-semibold text-[15px] tracking-tight text-white">BigRank AI</span>
           </Link>
         </header>
 
@@ -392,7 +392,7 @@ export function SignupPage() {
       <header className="relative z-10 p-6 flex items-center justify-between">
         <Link to="/" className="inline-flex items-center gap-3">
           <Logo size={28} />
-          <span className="font-semibold text-[15px] tracking-tight text-white">BrandAura</span>
+          <span className="font-semibold text-[15px] tracking-tight text-white">BigRank AI</span>
         </Link>
         <Link to="/login" className="text-[14px] text-white/50 hover:text-white transition-colors">
           Sign In

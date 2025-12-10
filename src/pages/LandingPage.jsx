@@ -556,7 +556,7 @@ export default function LandingPage() {
           <Link to="/" className="flex items-center gap-3 group">
             <Logo />
             <span className="font-medium text-[15px] tracking-tight text-white/90 group-hover:text-white transition-colors">
-              BrandAura
+              BigRank AI
             </span>
           </Link>
           
@@ -761,7 +761,7 @@ export default function LandingPage() {
                   </p>
                   
                   <p className="text-white/70">
-                    That's why we built BrandAura. We ask the AI platforms what they think of you, 
+                    That's why we built BigRank. We ask the AI platforms what they think of you, 
                     track their responses over time, and give you a clear playbook to improve.
                   </p>
                 </div>
@@ -945,10 +945,10 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <Logo size={24} />
-            <span className="text-[14px] font-medium text-white/60">BrandAura</span>
+            <span className="text-[14px] font-medium text-white/60">BigRank AI</span>
           </div>
           <div className="text-[13px] text-white/25">
-            © 2025 BrandAura AI. All rights reserved.
+            © 2025 BigRank AI. All rights reserved.
           </div>
         </div>
       </footer>

@@ -49,9 +49,10 @@ export default function Sidebar({ activeTab, onTabChange, resultsCount = 0 }) {
         <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-amber-400 via-amber-500 to-orange-500 flex items-center justify-center flex-shrink-0 shadow-lg shadow-amber-500/20">
           <span className="text-black font-bold text-xs">B</span>
         </div>
-        <span className={`ml-3 font-semibold text-[15px] text-white tracking-tight whitespace-nowrap transition-all duration-200 ${expanded ? 'opacity-100' : 'opacity-0 w-0 overflow-hidden'}`}>
-          BrandAura
-        </span>
+        <div className={`ml-3 whitespace-nowrap transition-all duration-200 ${expanded ? 'opacity-100' : 'opacity-0 w-0 overflow-hidden'}`}>
+          <div className="font-semibold text-[15px] text-white tracking-tight leading-none">BigRank AI</div>
+          <div className="text-[9px] text-white/30 mt-0.5">by BigBoost</div>
+        </div>
       </div>
 
       {/* Navigation */}
