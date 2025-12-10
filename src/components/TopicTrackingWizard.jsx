@@ -24,8 +24,10 @@ const DEFAULT_TOPICS = [
   { id: 't6', name: 'Reviews', description: 'User reviews and ratings' },
 ]
 
-export default function TopicTrackingWizard({ userId, onComplete, onCancel }) {
-  const { addBrand, setActiveBrand } = useBrandsStore()
+export default function TopicTrackingWizard({ userId, onComplete, onCancel, editBrand }) {
+  const { addBrand, updateBrand, setActiveBrand, loadBrands } = useBrandsStore()
+  
+  const isEditMode = !!editBrand
   
   const [step, setStep] = useState(1)
   const [loading, setLoading] = useState(false)
@@ -33,28 +35,38 @@ export default function TopicTrackingWizard({ userId, onComplete, onCancel }) {
   const [generating, setGenerating] = useState(false)
 
   // Step 1
-  const [website, setWebsite] = useState('')
-  const [brandName, setBrandName] = useState('')
-  const [industry, setIndustry] = useState('Digital Marketing')
+  const [website, setWebsite] = useState(editBrand?.website || '')
+  const [brandName, setBrandName] = useState(editBrand?.name || '')
+  const [industry, setIndustry] = useState(editBrand?.industry || 'Digital Marketing')
   
   // Step 2
-  const [competitors, setCompetitors] = useState([])
+  const [competitors, setCompetitors] = useState(
+    editBrand?.competitors?.map(c => ({ name: c })) || []
+  )
   const [competitorInput, setCompetitorInput] = useState('')
   
   // Step 3
-  const [selectedEngines, setSelectedEngines] = useState(['chatgpt-auto', 'perplexity', 'gemini'])
+  const [selectedEngines, setSelectedEngines] = useState(
+    editBrand?.settings?.engines || ['chatgpt-auto', 'perplexity', 'gemini']
+  )
   
   // Step 4
-  const [topics, setTopics] = useState([...DEFAULT_TOPICS])
-  const [selectedTopics, setSelectedTopics] = useState(['t1', 't2', 't3'])
+  const [topics, setTopics] = useState(
+    editBrand?.settings?.topics?.length > 0 
+      ? [...DEFAULT_TOPICS, ...editBrand.settings.topics.filter(t => !DEFAULT_TOPICS.find(d => d.id === t.id))]
+      : [...DEFAULT_TOPICS]
+  )
+  const [selectedTopics, setSelectedTopics] = useState(
+    editBrand?.settings?.topics?.map(t => t.id) || ['t1', 't2', 't3']
+  )
   const [topicInput, setTopicInput] = useState('')
   
   // Step 5
-  const [prompts, setPrompts] = useState([])
+  const [prompts, setPrompts] = useState(editBrand?.settings?.prompts || [])
 
-  // Auto-generate competitors on step 2
+  // Auto-generate competitors on step 2 (only for new brands)
   useEffect(() => {
-    if (step === 2 && competitors.length === 0 && website && !generating) {
+    if (step === 2 && competitors.length === 0 && website && !generating && !isEditMode) {
       generateCompetitors()
     }
   }, [step, website])
@@ -250,12 +262,6 @@ JSON only: [{"text":"prompt","type":"branded|unbranded|comparison","topic":"topi
     setLoading(true)
     setError('')
     
-    // Force close after 5 seconds regardless
-    const forceClose = setTimeout(() => {
-      console.log('Force closing wizard - save may continue in background')
-      if (onComplete) onComplete()
-    }, 5000)
-    
     try {
       const sanitize = (str) => String(str || '').trim().slice(0, 500)
       
@@ -278,25 +284,37 @@ JSON only: [{"text":"prompt","type":"branded|unbranded|comparison","topic":"topi
       const cleanWebsite = website.trim().toLowerCase()
       const cleanBrandName = brandName.trim() || cleanWebsite
       
-      const newBrand = await addBrand({
-        user_id: userId,
+      const brandData = {
         name: cleanBrandName,
         website: cleanWebsite,
         brand_names: cleanBrandName ? [cleanBrandName] : [],
         industry: industry,
         competitors: competitors.map(c => c.name),
         settings
-      })
+      }
       
-      clearTimeout(forceClose)
+      if (isEditMode && editBrand?.id) {
+        // Update existing brand
+        await updateBrand(editBrand.id, brandData)
+      } else {
+        // Create new brand
+        const newBrand = await addBrand({
+          user_id: userId,
+          ...brandData
+        })
+        
+        if (newBrand?.id) {
+          setActiveBrand(newBrand.id)
+        }
+      }
       
-      if (newBrand?.id) {
-        setActiveBrand(newBrand.id)
+      // Refresh brands list
+      if (userId) {
+        await loadBrands(userId)
       }
       
       if (onComplete) onComplete()
     } catch (e) {
-      clearTimeout(forceClose)
       console.error('Save error:', e)
       setError(e?.message || 'Failed to save. Please try again.')
       setLoading(false)
@@ -321,7 +339,9 @@ JSON only: [{"text":"prompt","type":"branded|unbranded|comparison","topic":"topi
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.06]">
           <div>
-            <h2 className="text-lg font-semibold text-white">Configure Tracking</h2>
+            <h2 className="text-lg font-semibold text-white">
+              {isEditMode ? `Edit ${editBrand?.name}` : 'Configure Tracking'}
+            </h2>
             <p className="text-[13px] text-white/40">Step {step} of 6</p>
           </div>
           {onCancel && (
@@ -694,7 +714,7 @@ JSON only: [{"text":"prompt","type":"branded|unbranded|comparison","topic":"topi
               className="flex items-center gap-2 px-6 py-2.5 rounded-xl font-medium bg-gradient-to-r from-amber-400 to-orange-500 text-black hover:brightness-110 disabled:opacity-50"
             >
               {loading ? Icons.loader : Icons.check}
-              <span>{loading ? 'Saving...' : 'Start Tracking'}</span>
+              <span>{loading ? 'Saving...' : (isEditMode ? 'Save Changes' : 'Start Tracking')}</span>
             </button>
           )}
         </div>

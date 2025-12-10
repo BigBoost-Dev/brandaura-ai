@@ -29,6 +29,7 @@ export default function Dashboard() {
   const { isRunning: isTracking, progress: trackingProgress, logs: trackingLogs, runTracking, stopTracking } = useTracking()
   
   const [showTopicWizard, setShowTopicWizard] = useState(false)
+  const [editingBrand, setEditingBrand] = useState(null)
   const [metrics, setMetrics] = useState(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
@@ -36,6 +37,16 @@ export default function Dashboard() {
   const brandResults = activeBrand ? getResults(activeBrand.id) : []
   
   const hasTrackingConfig = activeBrand?.settings?.prompts?.length > 0
+  
+  const openWizard = (brandToEdit = null) => {
+    setEditingBrand(brandToEdit)
+    setShowTopicWizard(true)
+  }
+  
+  const closeWizard = () => {
+    setShowTopicWizard(false)
+    setEditingBrand(null)
+  }
 
   useEffect(() => {
     if (!authLoading && !user) navigate('/login', { replace: true })
@@ -78,12 +89,12 @@ export default function Dashboard() {
       {showTopicWizard && (
         <TopicTrackingWizard
           userId={user?.id}
+          editBrand={editingBrand}
           onComplete={() => {
-            setShowTopicWizard(false)
+            closeWizard()
             loadBrands(user.id)
           }}
-          onCancel={brands.length > 0 ? () => setShowTopicWizard(false) : null}
-          existingBrands={brands}
+          onCancel={brands.length > 0 ? closeWizard : null}
         />
       )}
 
@@ -92,7 +103,7 @@ export default function Dashboard() {
         brands={brands} 
         activeBrand={activeBrand}
         onBrandChange={setActiveBrand} 
-        onAddBrand={() => setShowTopicWizard(true)} 
+        onAddBrand={() => openWizard(null)} 
         onDeleteBrand={async (brandId) => {
           if (brands.length <= 1) return
           try {
@@ -109,7 +120,7 @@ export default function Dashboard() {
             console.error('Failed to delete brand:', e)
           }
         }}
-        onOpenTopicWizard={() => setShowTopicWizard(true)}
+        onOpenTopicWizard={() => openWizard(activeBrand)}
         onSignOut={signOut}
         isTracking={isTracking}
         trackingProgress={trackingProgress}
@@ -135,7 +146,7 @@ export default function Dashboard() {
               activeBrand={activeBrand} 
               onRunTests={handleRunTracking} 
               isRunning={isTracking} 
-              onOpenTopicWizard={() => setShowTopicWizard(true)} 
+              onOpenTopicWizard={() => openWizard(activeBrand)} 
             />
           )}
           {activeTab === 'score' && (
