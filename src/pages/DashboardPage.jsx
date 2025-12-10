@@ -195,6 +195,70 @@ export default function Dashboard() {
   )
 }
 
+// Minimal Icons
+const Icons = {
+  chart: (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <path d="M18 20V10M12 20V4M6 20v-6" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  ),
+  beaker: (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <path d="M9 3h6m-5 0v6.5L4 19.5A1 1 0 005 21h14a1 1 0 001-1.5L14 9.5V3" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  ),
+  trophy: (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <path d="M6 9H4a2 2 0 01-2-2V5a2 2 0 012-2h2m12 6h2a2 2 0 002-2V5a2 2 0 00-2-2h-2M6 9V5a2 2 0 012-2h8a2 2 0 012 2v4m-12 0a6 6 0 006 6m6-6a6 6 0 01-6 6m0 0v4m-3 0h6" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  ),
+  eyeOff: (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <path d="M3 3l18 18M10.5 10.677a2 2 0 002.823 2.823M7.362 7.561C5.68 8.74 4.279 10.42 3 12c1.889 2.991 5.282 6 9 6 1.55 0 3.043-.523 4.395-1.35M12 6c3.718 0 7.111 3.009 9 6-.947 1.5-2.07 2.793-3.313 3.814" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  ),
+  bolt: (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <path d="M13 10V3L4 14h7v7l9-11h-7z" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  ),
+  lightbulb: (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <path d="M9 18h6m-5 4h4M12 2a7 7 0 00-4 12.73V17a1 1 0 001 1h6a1 1 0 001-1v-2.27A7 7 0 0012 2z" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  ),
+  barChart: (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  ),
+  trendUp: (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <path d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  ),
+  trendDown: (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <path d="M13 17h8m0 0v-8m0 8l-8-8-4 4-6-6" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  ),
+  inbox: (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <path d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  ),
+  document: (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  ),
+  bell: (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  ),
+}
+
 // Bento Card Component
 function BentoCard({ children, className = '', size = 'default' }) {
   const sizes = {
@@ -218,11 +282,18 @@ function MetricStat({ label, value, trend, color = 'amber', icon }) {
     blue: 'text-sky-400',
     white: 'text-white'
   }
+  const iconColors = {
+    amber: 'text-amber-400/60',
+    green: 'text-emerald-400/60',
+    red: 'text-red-400/60',
+    blue: 'text-sky-400/60',
+    white: 'text-white/40'
+  }
   return (
     <BentoCard>
       <div className="flex items-start justify-between mb-3">
         <span className="text-[13px] text-white/40">{label}</span>
-        {icon && <span className="text-lg opacity-60">{icon}</span>}
+        {icon && <span className={iconColors[color]}>{icon}</span>}
       </div>
       <div className={`text-3xl font-bold ${colors[color]} font-mono`}>{value}</div>
       {trend !== undefined && (
@@ -300,25 +371,25 @@ function DashboardView({ metrics, activeBrand, onRunTests, isRunning, onOpenTopi
           value={`${metrics.visibilityScore}%`} 
           trend={metrics.trend} 
           color="amber"
-          icon="📊"
+          icon={Icons.chart}
         />
         <MetricStat 
           label="Total Tests" 
           value={metrics.totalTests} 
           color="white"
-          icon="🧪"
+          icon={Icons.beaker}
         />
         <MetricStat 
           label="Top Picks" 
           value={metrics.leaderCount}
           color="green"
-          icon="🏆"
+          icon={Icons.trophy}
         />
         <MetricStat 
           label="Not Found" 
           value={metrics.notMentionedCount} 
           color="red"
-          icon="👻"
+          icon={Icons.eyeOff}
         />
       </div>
 
@@ -464,10 +535,13 @@ function DashboardView({ metrics, activeBrand, onRunTests, isRunning, onOpenTopi
                 ? 'bg-sky-500/10 border border-sky-500/20' 
                 : 'bg-red-500/10 border border-red-500/20'
           }`}>
-            <span className="text-2xl">
-              {metrics.visibilityScore >= benchmark.topPerformer ? '🏆' : 
-               metrics.visibilityScore >= benchmark.avgVisibility ? '📈' : '📉'}
-            </span>
+            <div className={`${
+              metrics.visibilityScore >= benchmark.topPerformer ? 'text-emerald-400' : 
+              metrics.visibilityScore >= benchmark.avgVisibility ? 'text-sky-400' : 'text-red-400'
+            }`}>
+              {metrics.visibilityScore >= benchmark.topPerformer ? Icons.trophy : 
+               metrics.visibilityScore >= benchmark.avgVisibility ? Icons.trendUp : Icons.trendDown}
+            </div>
             <div>
               <div className={`text-[14px] font-semibold ${
                 metrics.visibilityScore >= benchmark.topPerformer ? 'text-emerald-400' : 
@@ -516,7 +590,9 @@ function ResultsView({ results }) {
   if (!results.length) {
     return (
       <BentoCard size="large" className="text-center max-w-lg mx-auto">
-        <div className="text-4xl mb-4 opacity-50">📭</div>
+        <div className="w-12 h-12 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center mx-auto mb-4 text-white/30">
+          {Icons.inbox}
+        </div>
         <h3 className="text-lg font-semibold text-white mb-2">No Results Yet</h3>
         <p className="text-[14px] text-white/40">Run your first test to see results here.</p>
       </BentoCard>
@@ -553,7 +629,9 @@ function ResultsView({ results }) {
 function ReportsView({ brand, results }) {
   return (
     <BentoCard size="large" className="text-center max-w-lg mx-auto">
-      <div className="text-4xl mb-4 opacity-50">📑</div>
+      <div className="w-12 h-12 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center mx-auto mb-4 text-white/30">
+        {Icons.document}
+      </div>
       <h3 className="text-lg font-semibold text-white mb-2">Reports Coming Soon</h3>
       <p className="text-[14px] text-white/40">Automated weekly and monthly reports will be available here.</p>
     </BentoCard>
@@ -564,7 +642,9 @@ function ReportsView({ brand, results }) {
 function AlertsView({ brand }) {
   return (
     <BentoCard size="large" className="text-center max-w-lg mx-auto">
-      <div className="text-4xl mb-4 opacity-50">🔔</div>
+      <div className="w-12 h-12 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center mx-auto mb-4 text-white/30">
+        {Icons.bell}
+      </div>
       <h3 className="text-lg font-semibold text-white mb-2">Alerts Coming Soon</h3>
       <p className="text-[14px] text-white/40">Get notified when your visibility changes significantly.</p>
     </BentoCard>

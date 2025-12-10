@@ -1,6 +1,17 @@
 import React, { useState, useMemo } from 'react'
 import { scoreContent } from '../lib/analysis'
 
+const Icons = {
+  file: <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>,
+  layout: <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>,
+  trophy: <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M6 9H4a2 2 0 01-2-2V5a2 2 0 012-2h2m12 6h2a2 2 0 002-2V5a2 2 0 00-2-2h-2M6 9V5a2 2 0 012-2h8a2 2 0 012 2v4m-12 0a6 6 0 006 6m6-6a6 6 0 01-6 6m0 0v4m-3 0h6"/></svg>,
+  target: <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>,
+  clock: <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>,
+  link: <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>,
+  lightbulb: <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M9 18h6m-5 4h4M12 2a7 7 0 00-4 12.73V17a1 1 0 001 1h6a1 1 0 001-1v-2.27A7 7 0 0012 2z"/></svg>,
+  chart: <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>,
+}
+
 const SCORE_COLORS = {
   A: { bg: 'bg-emerald-500/20', border: 'border-emerald-500/50', text: 'text-emerald-400' },
   B: { bg: 'bg-blue-500/20', border: 'border-blue-500/50', text: 'text-blue-400' },
@@ -10,12 +21,16 @@ const SCORE_COLORS = {
 }
 
 const CATEGORY_LABELS = {
-  clarity: { icon: '📝', label: 'Clarity', description: 'Readability and sentence structure' },
-  structure: { icon: '🏗️', label: 'Structure', description: 'Headers, lists, and organization' },
-  authority: { icon: '🏆', label: 'Authority', description: 'Statistics, quotes, and citations' },
-  relevance: { icon: '🎯', label: 'Relevance', description: 'Brand mentions and keywords' },
-  freshness: { icon: '🕐', label: 'Freshness', description: 'Current dates and year references' },
-  citations: { icon: '🔗', label: 'Citations', description: 'Source links and references' }
+  clarity: { icon: Icons.file, label: 'Clarity', description: 'Readability and sentence structure' },
+  structure: { icon: Icons.layout, label: 'Structure', description: 'Headers, lists, and organization' },
+  authority: { icon: Icons.trophy, label: 'Authority', description: 'Statistics, quotes, and citations' },
+  relevance: { icon: Icons.target, label: 'Relevance', description: 'Brand mentions and keywords' },
+  freshness: { icon: Icons.clock, label: 'Freshness', description: 'Current dates and year references' },
+  citations: { icon: Icons.link, label: 'Citations', description: 'Source links and references' }
+}
+
+function Card({ children, className = '' }) {
+  return <div className={`rounded-2xl bg-white/[0.02] border border-white/[0.06] p-6 ${className}`}>{children}</div>
 }
 
 export default function ContentScoring({ brandName = '', keywords = [] }) {
@@ -30,22 +45,9 @@ export default function ContentScoring({ brandName = '', keywords = [] }) {
     return scoreContent(content, brandName, kws)
   }, [content, brandName, customKeywords])
   
-  const handleFetchUrl = async () => {
-    if (!url.trim()) return
-    setIsAnalyzing(true)
-    try {
-      // In production, this would call a backend service to fetch the page content
-      // For now, we'll show a message
-      alert('URL fetching requires a backend service. Please paste your content directly.')
-    } finally {
-      setIsAnalyzing(false)
-    }
-  }
-  
   const handleFileUpload = async (e) => {
     const file = e.target.files?.[0]
     if (!file) return
-    
     setIsAnalyzing(true)
     try {
       const text = await file.text()
@@ -58,228 +60,145 @@ export default function ContentScoring({ brandName = '', keywords = [] }) {
   }
   
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold">Content Scoring</h2>
-          <p className="text-white/60">Analyze your content for AI discoverability</p>
-        </div>
+    <div className="space-y-6 max-w-4xl">
+      <div>
+        <h2 className="text-xl font-semibold text-white">Content Scoring</h2>
+        <p className="text-[14px] text-white/40 mt-1">Analyze how AI-optimized your content is</p>
       </div>
-      
-      {/* Input Methods */}
-      <div className="grid md:grid-cols-2 gap-6">
-        {/* Content Input */}
-        <div className="bg-white/5 rounded-xl p-6 border border-white/10">
-          <h3 className="font-semibold mb-4">Paste Content</h3>
+
+      {/* Input Section */}
+      <Card>
+        <div className="mb-4">
+          <label className="block text-[13px] text-white/60 mb-2">Brand Keywords (comma-separated)</label>
+          <input
+            type="text"
+            value={customKeywords}
+            onChange={(e) => setCustomKeywords(e.target.value)}
+            placeholder="Enter keywords to check for..."
+            className="w-full px-4 py-2.5 rounded-lg bg-white/[0.03] border border-white/[0.08] text-white text-[14px] placeholder:text-white/30 focus:outline-none focus:border-amber-500/50"
+          />
+        </div>
+        
+        <div className="mb-4">
+          <label className="block text-[13px] text-white/60 mb-2">Content to Analyze</label>
           <textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            placeholder="Paste your page content, article, or marketing copy here..."
-            className="w-full h-48 bg-white/5 border border-white/10 rounded-lg p-4 text-sm resize-none focus:outline-none focus:border-primary-500/50"
+            placeholder="Paste your content here..."
+            rows={8}
+            className="w-full px-4 py-3 rounded-lg bg-white/[0.03] border border-white/[0.08] text-white text-[14px] placeholder:text-white/30 focus:outline-none focus:border-amber-500/50 resize-none"
           />
-          <div className="flex items-center gap-4 mt-4">
-            <label className="flex items-center gap-2 px-4 py-2 bg-white/10 rounded-lg cursor-pointer hover:bg-white/20 transition">
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-              </svg>
-              <span className="text-sm">Upload File</span>
-              <input type="file" accept=".txt,.md,.html" onChange={handleFileUpload} className="hidden" />
-            </label>
-            {content && (
-              <button 
-                onClick={() => setContent('')}
-                className="text-sm text-white/60 hover:text-white"
-              >
-                Clear
-              </button>
-            )}
-          </div>
         </div>
         
-        {/* Settings */}
-        <div className="bg-white/5 rounded-xl p-6 border border-white/10">
-          <h3 className="font-semibold mb-4">Analysis Settings</h3>
-          
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm text-white/60 mb-2">Brand Name</label>
-              <input
-                type="text"
-                value={brandName}
-                disabled
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-sm opacity-60"
-                placeholder="Your brand name"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm text-white/60 mb-2">Target Keywords (comma-separated)</label>
-              <textarea
-                value={customKeywords}
-                onChange={(e) => setCustomKeywords(e.target.value)}
-                className="w-full h-24 bg-white/5 border border-white/10 rounded-lg p-3 text-sm resize-none focus:outline-none focus:border-primary-500/50"
-                placeholder="seo tool, content optimization, ai visibility..."
-              />
-            </div>
-            
-            <div className="text-sm text-white/50">
-              <p>✓ Analyzes clarity and readability</p>
-              <p>✓ Checks content structure</p>
-              <p>✓ Evaluates authority signals</p>
-              <p>✓ Measures keyword relevance</p>
-            </div>
-          </div>
+        <div className="flex items-center gap-3">
+          <label className="px-4 py-2 rounded-lg bg-white/[0.05] border border-white/[0.08] text-white/60 text-[13px] cursor-pointer hover:bg-white/[0.08] transition">
+            Upload File
+            <input type="file" accept=".txt,.md,.html" onChange={handleFileUpload} className="hidden" />
+          </label>
+          <span className="text-[12px] text-white/30">{content.length.toLocaleString()} characters</span>
         </div>
-      </div>
-      
+      </Card>
+
       {/* Results */}
       {score && (
-        <div className="space-y-6">
+        <>
           {/* Overall Score */}
-          <div className="bg-white/5 rounded-xl p-6 border border-white/10">
-            <div className="flex items-center gap-8">
-              {/* Grade Circle */}
-              <div className={`w-32 h-32 rounded-full ${SCORE_COLORS[score.grade].bg} ${SCORE_COLORS[score.grade].border} border-4 flex items-center justify-center flex-shrink-0`}>
-                <div className="text-center">
-                  <div className={`text-5xl font-bold ${SCORE_COLORS[score.grade].text}`}>{score.grade}</div>
-                  <div className="text-sm text-white/60">{score.total}/100</div>
-                </div>
+          <Card>
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-[14px] font-medium text-white/60 mb-2">Overall AI Optimization Score</h3>
+                <div className={`text-4xl font-bold ${SCORE_COLORS[score.grade].text}`}>{score.grade}</div>
+                <div className="text-[13px] text-white/40 mt-1">{score.total}/100 points</div>
               </div>
-              
-              <div className="flex-1">
-                <h3 className="text-xl font-semibold mb-2">
-                  {score.total >= 80 ? '🎉 Excellent! Your content is well-optimized for AI.' :
-                   score.total >= 60 ? '👍 Good. Some improvements possible.' :
-                   score.total >= 40 ? '⚠️ Needs Work. Several areas to improve.' :
-                   '🚨 Poor. Significant optimization needed.'}
-                </h3>
-                <p className="text-white/60 mb-4">
-                  {score.wordCount} words • {score.sentenceCount} sentences • 
-                  {score.recommendations.length} recommendations
-                </p>
-                
-                {/* Quick stats */}
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="text-center p-3 bg-white/5 rounded-lg">
-                    <div className="text-lg font-bold">{Math.round(score.wordCount / score.sentenceCount)}</div>
-                    <div className="text-xs text-white/60">Words/Sentence</div>
-                  </div>
-                  <div className="text-center p-3 bg-white/5 rounded-lg">
-                    <div className="text-lg font-bold">{score.scores.relevance}/20</div>
-                    <div className="text-xs text-white/60">Relevance Score</div>
-                  </div>
-                  <div className="text-center p-3 bg-white/5 rounded-lg">
-                    <div className="text-lg font-bold">{score.scores.authority}/20</div>
-                    <div className="text-xs text-white/60">Authority Score</div>
-                  </div>
-                </div>
+              <div className={`w-20 h-20 rounded-2xl flex items-center justify-center ${SCORE_COLORS[score.grade].bg} border ${SCORE_COLORS[score.grade].border}`}>
+                <span className={`text-3xl font-bold ${SCORE_COLORS[score.grade].text}`}>{score.total}</span>
               </div>
             </div>
-          </div>
-          
+            <p className="mt-4 text-[13px] text-white/50">
+              {score.total >= 80 ? 'Excellent! Your content is well-optimized for AI.' :
+               score.total >= 60 ? 'Good. Some areas could be improved.' :
+               score.total >= 40 ? 'Needs work. Several areas to improve.' :
+               'Low score. Significant optimization needed.'}
+            </p>
+          </Card>
+
           {/* Category Breakdown */}
-          <div className="bg-white/5 rounded-xl p-6 border border-white/10">
-            <h3 className="text-lg font-semibold mb-4">Score Breakdown</h3>
-            <div className="grid md:grid-cols-2 gap-4">
-              {Object.entries(score.scores).map(([category, categoryScore]) => {
-                const info = CATEGORY_LABELS[category]
-                const maxScore = category === 'freshness' || category === 'citations' ? 10 : 20
-                const percentage = (categoryScore / maxScore) * 100
-                
+          <Card>
+            <h3 className="text-[14px] font-medium text-white/60 mb-5">Score Breakdown</h3>
+            <div className="space-y-4">
+              {Object.entries(score.categories).map(([key, value]) => {
+                const cat = CATEGORY_LABELS[key] || { label: key, description: '' }
+                const percentage = Math.round((value / 20) * 100)
                 return (
-                  <div key={category} className="bg-white/5 rounded-lg p-4">
+                  <div key={key}>
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
-                        <span className="text-lg">{info.icon}</span>
-                        <span className="font-medium">{info.label}</span>
+                        <span className="text-white/40">{cat.icon}</span>
+                        <span className="text-[13px] text-white">{cat.label}</span>
+                        <span className="text-[11px] text-white/30">{cat.description}</span>
                       </div>
-                      <span className={`font-bold ${
-                        percentage >= 70 ? 'text-emerald-400' :
-                        percentage >= 50 ? 'text-amber-400' : 'text-rose-400'
-                      }`}>
-                        {categoryScore}/{maxScore}
-                      </span>
+                      <span className="text-[13px] font-semibold font-mono text-amber-400">{value}/20</span>
                     </div>
-                    <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                    <div className="h-1.5 bg-white/[0.04] rounded-full overflow-hidden">
                       <div 
-                        className={`h-full transition-all duration-500 ${
-                          percentage >= 70 ? 'bg-emerald-500' :
-                          percentage >= 50 ? 'bg-amber-500' : 'bg-rose-500'
-                        }`}
-                        style={{ width: `${percentage}%` }}
+                        className="h-full rounded-full bg-amber-500 transition-all" 
+                        style={{ width: `${percentage}%` }} 
                       />
                     </div>
-                    <p className="text-xs text-white/50 mt-2">{info.description}</p>
                   </div>
                 )
               })}
             </div>
-          </div>
-          
+          </Card>
+
           {/* Recommendations */}
-          {score.recommendations.length > 0 && (
-            <div className="bg-white/5 rounded-xl p-6 border border-white/10">
-              <h3 className="text-lg font-semibold mb-4">🎯 Recommendations</h3>
-              <div className="space-y-3">
-                {score.recommendations.map((rec, idx) => {
-                  const priorityColors = {
-                    high: 'border-l-rose-500 bg-rose-500/5',
-                    medium: 'border-l-amber-500 bg-amber-500/5',
-                    low: 'border-l-blue-500 bg-blue-500/5'
-                  }
-                  
-                  return (
-                    <div key={idx} className={`border-l-4 ${priorityColors[rec.priority]} rounded-r-lg p-4`}>
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-sm">{CATEGORY_LABELS[rec.category]?.icon}</span>
-                        <span className="font-medium">{CATEGORY_LABELS[rec.category]?.label}</span>
-                        <span className={`text-xs px-2 py-0.5 rounded ${
-                          rec.priority === 'high' ? 'bg-rose-500/20 text-rose-400' :
-                          rec.priority === 'medium' ? 'bg-amber-500/20 text-amber-400' :
-                          'bg-blue-500/20 text-blue-400'
-                        }`}>
-                          {rec.priority}
-                        </span>
-                      </div>
-                      <p className="text-sm text-white/80">{rec.suggestion}</p>
-                    </div>
-                  )
-                })}
+          {score.recommendations && score.recommendations.length > 0 && (
+            <Card>
+              <div className="flex items-center gap-2 mb-4">
+                <span className="text-amber-400">{Icons.target}</span>
+                <h3 className="text-[14px] font-medium text-white">Recommendations</h3>
               </div>
-            </div>
+              <ul className="space-y-2">
+                {score.recommendations.map((rec, i) => (
+                  <li key={i} className="text-[13px] text-white/50 flex items-start gap-2">
+                    <span className="text-amber-400 mt-0.5">•</span>
+                    {rec}
+                  </li>
+                ))}
+              </ul>
+            </Card>
           )}
-          
-          {/* Best Practices */}
-          <div className="bg-gradient-to-r from-primary-500/10 to-purple-500/10 rounded-xl p-6 border border-primary-500/20">
-            <h3 className="text-lg font-semibold mb-4">💡 AI Content Best Practices</h3>
-            <div className="grid md:grid-cols-2 gap-4 text-sm">
-              <div className="space-y-2">
-                <p className="text-white/80"><span className="text-emerald-400">✓</span> Use clear, direct language</p>
-                <p className="text-white/80"><span className="text-emerald-400">✓</span> Include factual data and statistics</p>
-                <p className="text-white/80"><span className="text-emerald-400">✓</span> Structure with headers and lists</p>
-                <p className="text-white/80"><span className="text-emerald-400">✓</span> Add expert quotes and citations</p>
+
+          {/* Tips */}
+          <Card className="border-amber-500/20">
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-400 flex-shrink-0">
+                {Icons.lightbulb}
               </div>
-              <div className="space-y-2">
-                <p className="text-white/80"><span className="text-emerald-400">✓</span> Keep content up to date</p>
-                <p className="text-white/80"><span className="text-emerald-400">✓</span> Mention your brand naturally</p>
-                <p className="text-white/80"><span className="text-emerald-400">✓</span> Include comparison context</p>
-                <p className="text-white/80"><span className="text-emerald-400">✓</span> Answer common questions directly</p>
+              <div>
+                <h3 className="text-[14px] font-medium text-white mb-2">AI Content Best Practices</h3>
+                <ul className="space-y-1 text-[13px] text-white/50">
+                  <li>• Use clear, descriptive headings and subheadings</li>
+                  <li>• Include relevant statistics and data points</li>
+                  <li>• Add authoritative citations and sources</li>
+                  <li>• Keep sentences concise and scannable</li>
+                  <li>• Update content regularly with current dates</li>
+                </ul>
               </div>
             </div>
-          </div>
-        </div>
+          </Card>
+        </>
       )}
-      
+
       {/* Empty State */}
       {!score && (
-        <div className="bg-white/5 rounded-xl p-12 border border-white/10 text-center">
-          <div className="text-6xl mb-4">📊</div>
-          <h3 className="text-xl font-semibold mb-2">Ready to Analyze</h3>
-          <p className="text-white/60 max-w-md mx-auto">
-            Paste your content above to get an AI discoverability score and actionable recommendations.
-          </p>
-        </div>
+        <Card className="text-center py-12">
+          <div className="w-12 h-12 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center mx-auto mb-4 text-white/30">
+            {Icons.chart}
+          </div>
+          <h3 className="text-lg font-semibold text-white mb-2">Paste Content to Analyze</h3>
+          <p className="text-[14px] text-white/40">Enter text or upload a file to see AI optimization scores</p>
+        </Card>
       )}
     </div>
   )
