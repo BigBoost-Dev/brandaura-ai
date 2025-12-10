@@ -16,13 +16,31 @@ async function getSession() {
   }
   
   console.log('[getSession] Fetching fresh session...')
-  const { data: { session } } = await supabase.auth.getSession()
-  console.log('[getSession] Got session:', !!session)
-  if (session) {
-    cachedSession = session
-    sessionExpiry = now + 10 * 60 * 1000 // 10 minutes
+  
+  // Timeout the getSession call itself - it hangs sometimes
+  try {
+    const sessionPromise = supabase.auth.getSession()
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('SESSION_TIMEOUT')), 5000)
+    )
+    
+    const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise])
+    console.log('[getSession] Got session:', !!session)
+    
+    if (session) {
+      cachedSession = session
+      sessionExpiry = now + 10 * 60 * 1000 // 10 minutes
+    }
+    return session
+  } catch (err) {
+    console.log('[getSession] Error/timeout:', err.message)
+    // Return cached session even if expired, better than nothing
+    if (cachedSession) {
+      console.log('[getSession] Using expired cache as fallback')
+      return cachedSession
+    }
+    return null
   }
-  return session
 }
 
 /**
