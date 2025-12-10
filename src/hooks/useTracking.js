@@ -66,6 +66,8 @@ export function useTracking() {
           continue
         }
 
+        console.log(`[${queryIndex}/${totalQueries}] Starting: ${engine.name}`)
+
         setProgress({
           current: queryIndex,
           total: totalQueries,
@@ -75,12 +77,15 @@ export function useTracking() {
         })
 
         try {
+          console.log(`[${queryIndex}] Calling queryAI...`)
           const { success, response, cost, error } = await queryAI(engine.model, prompt.text, 45000)
+          console.log(`[${queryIndex}] queryAI returned: success=${success}, responseLength=${response?.length || 0}`)
 
           if (abortRef.current?.signal.aborted) break
 
           if (success && response) {
             try {
+              console.log(`[${queryIndex}] Starting analysis...`)
               // Parse competitors if it's a JSON string
               let parsedCompetitors = brand.competitors || []
               if (typeof parsedCompetitors === 'string') {
@@ -89,6 +94,7 @@ export function useTracking() {
               parsedCompetitors = parsedCompetitors.map(c => typeof c === 'object' ? c.name : c)
               
               const analysis = analyzeResponse(response, brand.name, parsedCompetitors)
+              console.log(`[${queryIndex}] Analysis done: ${analysis.brandMention}`)
               
               // Extract sources from response
               let sources = []
@@ -97,6 +103,7 @@ export function useTracking() {
               } catch (e) {
                 console.warn('Source extraction failed:', e)
               }
+              console.log(`[${queryIndex}] Sources extracted: ${sources.length}`)
               
               // Find topic info
               const topic = topics.find(t => t.id === prompt.topicId) || {}
@@ -160,7 +167,9 @@ export function useTracking() {
 
         // Shorter delay between queries (2 seconds)
         if (!abortRef.current?.signal.aborted) {
+          console.log(`[${queryIndex}] Waiting 2 seconds...`)
           await new Promise(r => setTimeout(r, 2000))
+          console.log(`[${queryIndex}] Done waiting, next iteration`)
         }
       }
     }

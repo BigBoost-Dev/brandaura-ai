@@ -3,21 +3,42 @@ import { MENTION_TYPES } from './constants'
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
 
+// Cache session to avoid repeated auth calls
+let cachedSession = null
+let sessionExpiry = 0
+
+async function getSession() {
+  const now = Date.now()
+  if (cachedSession && sessionExpiry > now) {
+    return cachedSession
+  }
+  const { data: { session } } = await supabase.auth.getSession()
+  if (session) {
+    cachedSession = session
+    sessionExpiry = now + 5 * 60 * 1000 // Cache for 5 minutes
+  }
+  return session
+}
+
 /**
  * Query AI through the secure backend proxy
- * NEVER call OpenRouter directly from frontend
  */
 export async function queryAI(model, query, timeoutMs = 30000) {
   const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), timeoutMs)
+  const timeoutId = setTimeout(() => {
+    console.log('Query timeout triggered')
+    controller.abort()
+  }, timeoutMs)
   
   try {
-    const { data: { session } } = await supabase.auth.getSession()
+    const session = await getSession()
     
     if (!session) {
-      clearTimeout(timeout)
-      throw new Error('Not authenticated')
+      clearTimeout(timeoutId)
+      return { success: false, error: 'Not authenticated' }
     }
+    
+    console.log(`Calling API: ${model}`)
     
     const response = await fetch(`${SUPABASE_URL}/functions/v1/query-ai`, {
       method: 'POST',
@@ -29,11 +50,13 @@ export async function queryAI(model, query, timeoutMs = 30000) {
       signal: controller.signal
     })
 
-    clearTimeout(timeout)
+    clearTimeout(timeoutId)
+    
+    console.log(`API response: ${response.status}`)
 
     if (!response.ok) {
       const errorText = await response.text()
-      throw new Error(errorText || `API error: ${response.status}`)
+      return { success: false, error: errorText || `API error: ${response.status}` }
     }
 
     const data = await response.json()
@@ -45,15 +68,13 @@ export async function queryAI(model, query, timeoutMs = 30000) {
       cost: data.usage ? (data.usage.prompt_tokens * 0.000001 + data.usage.completion_tokens * 0.000002) : 0
     }
   } catch (error) {
-    clearTimeout(timeout)
+    clearTimeout(timeoutId)
     if (error.name === 'AbortError') {
+      console.log('Request aborted/timed out')
       return { success: false, error: 'Request timed out' }
     }
     console.error('queryAI error:', error.message)
-    return {
-      success: false,
-      error: error.message
-    }
+    return { success: false, error: error.message }
   }
 }
 
