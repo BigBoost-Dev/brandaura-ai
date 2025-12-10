@@ -666,10 +666,7 @@ function ResultsView({ results }) {
   // Helper to get valid sources (with URLs)
   const getValidSources = (result) => {
     if (!Array.isArray(result.sources)) return []
-    return result.sources.filter(src => {
-      const url = typeof src === 'string' ? src : src?.url
-      return url && url.startsWith('http')
-    })
+    return result.sources
   }
 
   return (
@@ -723,21 +720,30 @@ function ResultsView({ results }) {
                   </div>
                   {validSources.length > 0 && (
                     <div className="mt-3">
-                      <span className="text-[11px] text-white/30 uppercase tracking-wide">Sources Cited</span>
+                      <span className="text-[11px] text-white/30 uppercase tracking-wide">Sources Referenced</span>
                       <div className="flex flex-wrap gap-2 mt-2">
                         {validSources.map((src, j) => {
-                          const url = typeof src === 'string' ? src : src.url
-                          const name = typeof src === 'string' ? new URL(src).hostname : (src.name || new URL(src.url).hostname)
-                          return (
+                          const url = typeof src === 'string' ? src : src?.url
+                          const name = typeof src === 'string' ? src : (src?.name || 'Source')
+                          const hasUrl = url && url.startsWith('http')
+                          
+                          return hasUrl ? (
                             <a 
                               key={j} 
                               href={url} 
                               target="_blank" 
                               rel="noopener noreferrer"
-                              className="text-[12px] text-amber-400/70 hover:text-amber-400"
+                              className="px-2 py-1 rounded-md bg-amber-500/10 text-[12px] text-amber-400 hover:bg-amber-500/20 transition"
+                            >
+                              🔗 {name}
+                            </a>
+                          ) : (
+                            <span 
+                              key={j}
+                              className="px-2 py-1 rounded-md bg-white/[0.05] text-[12px] text-white/50"
                             >
                               {name}
-                            </a>
+                            </span>
                           )
                         })}
                       </div>
