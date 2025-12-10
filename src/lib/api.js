@@ -3,6 +3,25 @@ import { MENTION_TYPES } from './constants'
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
 
+// Cache session to avoid repeated getSession calls
+let cachedSession = null
+let sessionExpiry = 0
+
+async function getSession() {
+  const now = Date.now()
+  // Use cached session if still valid (cache for 10 minutes)
+  if (cachedSession && sessionExpiry > now) {
+    return cachedSession
+  }
+  
+  const { data: { session } } = await supabase.auth.getSession()
+  if (session) {
+    cachedSession = session
+    sessionExpiry = now + 10 * 60 * 1000 // 10 minutes
+  }
+  return session
+}
+
 /**
  * Query AI through the secure backend proxy
  * NEVER call OpenRouter directly from frontend
@@ -16,10 +35,8 @@ export async function queryAI(model, query, timeoutMs = 45000) {
   }, timeoutMs)
   
   try {
-    // Get current session
-    console.log(`[queryAI] Getting session...`)
-    const { data: { session } } = await supabase.auth.getSession()
-    console.log(`[queryAI] Got session: ${!!session}`)
+    // Get session (uses cache if available)
+    const session = await getSession()
     
     if (!session) {
       clearTimeout(timeoutId)
