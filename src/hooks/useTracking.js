@@ -22,10 +22,17 @@ export function useTracking() {
   const runTracking = useCallback(async (brand, userId) => {
     if (isRunning || !brand || !userId) return
     
-    const settings = brand.settings || {}
+    // Parse settings if it's a JSON string
+    let settings = brand.settings || {}
+    if (typeof settings === 'string') {
+      try { settings = JSON.parse(settings) } catch { settings = {} }
+    }
+    
     const prompts = settings.prompts || []
     const engines = settings.engines || ['chatgpt-auto', 'perplexity', 'gemini']
     const topics = settings.topics || []
+    
+    console.log('Tracking config:', { prompts: prompts.length, engines: engines.length, topics: topics.length })
 
     if (prompts.length === 0) {
       addLog('❌ No prompts configured. Use Topic Wizard to set up tracking.', 'error')
@@ -73,31 +80,37 @@ export function useTracking() {
           if (abortRef.current?.signal.aborted) break
 
           if (success && response) {
-            // Parse competitors if it's a JSON string
-            let parsedCompetitors = brand.competitors || []
-            if (typeof parsedCompetitors === 'string') {
-              try { parsedCompetitors = JSON.parse(parsedCompetitors) } catch {}
-            }
-            parsedCompetitors = parsedCompetitors.map(c => typeof c === 'object' ? c.name : c)
-            
-            const analysis = analyzeResponse(response, brand.name, parsedCompetitors)
-            
-            // Extract sources from response
-            const sources = extractSources(response, analysis.citedUrls || [])
-            
-            // Find topic info
-            const topic = topics.find(t => t.id === prompt.topicId) || {}
+            try {
+              // Parse competitors if it's a JSON string
+              let parsedCompetitors = brand.competitors || []
+              if (typeof parsedCompetitors === 'string') {
+                try { parsedCompetitors = JSON.parse(parsedCompetitors) } catch {}
+              }
+              parsedCompetitors = parsedCompetitors.map(c => typeof c === 'object' ? c.name : c)
+              
+              const analysis = analyzeResponse(response, brand.name, parsedCompetitors)
+              
+              // Extract sources from response
+              let sources = []
+              try {
+                sources = extractSources(response, analysis.citedUrls || [])
+              } catch (e) {
+                console.warn('Source extraction failed:', e)
+              }
+              
+              // Find topic info
+              const topic = topics.find(t => t.id === prompt.topicId) || {}
 
-            results.push({
-              brand_id: brand.id,
-              user_id: userId,
-              batch_id: batchId,
-              // Engine info
-              platform_id: engineId,
-              platform_name: engine.name,
-              model: engine.model,
-              // Query info
-              query: prompt.text,
+              results.push({
+                brand_id: brand.id,
+                user_id: userId,
+                batch_id: batchId,
+                // Engine info
+                platform_id: engineId,
+                platform_name: engine.name,
+                model: engine.model,
+                // Query info
+                query: prompt.text,
               query_type: prompt.type || 'branded',
               // Topic info
               topic_id: prompt.topicId,
@@ -132,17 +145,22 @@ export function useTracking() {
             if (sources.length > 0) {
               addLog(`   📎 Sources: ${sources.map(s => s.name).join(', ')}`, 'info')
             }
+            } catch (analysisErr) {
+              console.error('Analysis error:', analysisErr)
+              addLog(`⚠️ ${engine.name}: Response received but analysis failed`, 'warning')
+            }
           } else {
             addLog(`❌ ${engine.name}: ${error || 'No response'}`, 'error')
           }
         } catch (err) {
           if (err.name === 'AbortError') break
+          console.error('Query error:', err)
           addLog(`❌ ${engine.name}: ${err.message}`, 'error')
         }
 
-        // Rate limiting delay between queries (5 seconds to avoid 429 errors)
+        // Shorter delay between queries (2 seconds)
         if (!abortRef.current?.signal.aborted) {
-          await new Promise(r => setTimeout(r, 5000))
+          await new Promise(r => setTimeout(r, 2000))
         }
       }
     }
