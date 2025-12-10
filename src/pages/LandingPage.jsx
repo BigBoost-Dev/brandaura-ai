@@ -555,14 +555,19 @@ export default function LandingPage() {
         <div className="relative max-w-7xl mx-auto px-6 lg:px-8 h-16 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-3 group">
             <Logo />
-            <span className="font-medium text-[15px] tracking-tight text-white/90 group-hover:text-white transition-colors">
-              BigRank AI
-            </span>
+            <div>
+              <span className="font-medium text-[15px] tracking-tight text-white/90 group-hover:text-white transition-colors block leading-none">
+                BigRank AI
+              </span>
+              <span className="text-[9px] text-white/30">by BigBoost</span>
+            </div>
           </Link>
           
-          <div className="hidden md:flex items-center gap-10">
+          <div className="hidden md:flex items-center gap-8">
+            <a href="#why" className="text-[14px] text-white/40 hover:text-white/90 transition-colors">Why</a>
             <a href="#features" className="text-[14px] text-white/40 hover:text-white/90 transition-colors">Features</a>
             <a href="#how-it-works" className="text-[14px] text-white/40 hover:text-white/90 transition-colors">How it works</a>
+            <Link to="/pricing" className="text-[14px] text-white/40 hover:text-white/90 transition-colors">Pricing</Link>
           </div>
 
           <div className="flex items-center gap-4">
@@ -734,7 +739,7 @@ export default function LandingPage() {
       </section>
 
       {/* The Problem - Editorial Style */}
-      <section className="py-24 lg:py-32">
+      <section id="why" className="py-24 lg:py-32">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-16 lg:gap-24 items-center">
             {/* Left - Editorial text with reveal */}
@@ -945,7 +950,10 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <Logo size={24} />
-            <span className="text-[14px] font-medium text-white/60">BigRank AI</span>
+            <div>
+              <span className="text-[14px] font-medium text-white/60 block leading-none">BigRank AI</span>
+              <span className="text-[9px] text-white/30">by BigBoost</span>
+            </div>
           </div>
           <div className="text-[13px] text-white/25">
             © 2025 BigRank AI. All rights reserved.
