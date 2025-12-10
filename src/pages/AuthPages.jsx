@@ -1,7 +1,9 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../hooks/useStore'
 import { BorderBeam } from '../components/magicui/border-beam'
+import { validateEmail, validatePassword, validateName, checkRateLimit } from '../lib/validation'
+import { initRecaptcha, executeRecaptcha } from '../lib/recaptcha'
 
 function Logo({ size = 32 }) {
   return (
@@ -38,21 +40,119 @@ function ShinyButton({ children, type = "button", disabled }) {
   )
 }
 
+// Password strength indicator
+function PasswordStrength({ strength }) {
+  const labels = ['Very Weak', 'Weak', 'Fair', 'Strong', 'Very Strong']
+  const colors = ['bg-red-500', 'bg-orange-500', 'bg-yellow-500', 'bg-lime-500', 'bg-green-500']
+  
+  return (
+    <div className="mt-2">
+      <div className="flex gap-1 mb-1">
+        {[0, 1, 2, 3].map((i) => (
+          <div
+            key={i}
+            className={`h-1 flex-1 rounded-full transition-colors ${
+              i < strength ? colors[strength] : 'bg-white/10'
+            }`}
+          />
+        ))}
+      </div>
+      {strength > 0 && (
+        <p className={`text-[10px] ${strength < 2 ? 'text-orange-400' : strength < 3 ? 'text-yellow-400' : 'text-green-400'}`}>
+          {labels[strength]}
+        </p>
+      )}
+    </div>
+  )
+}
+
+// Input with validation state
+function ValidatedInput({ 
+  label, 
+  type = "text", 
+  value, 
+  onChange, 
+  placeholder, 
+  error,
+  hint,
+  required = false,
+  autoComplete
+}) {
+  return (
+    <div>
+      <label className="block text-[11px] text-white/40 mb-1.5">{label}</label>
+      <input
+        type={type}
+        value={value}
+        onChange={onChange}
+        className={`w-full px-3.5 py-2.5 rounded-xl bg-white/[0.03] border text-white placeholder-white/20 text-[13px] focus:outline-none transition-all ${
+          error 
+            ? 'border-red-500/50 focus:border-red-500' 
+            : 'border-white/[0.06] focus:border-amber-500/50'
+        }`}
+        placeholder={placeholder}
+        required={required}
+        autoComplete={autoComplete}
+      />
+      {error && <p className="text-[10px] text-red-400 mt-1">{error}</p>}
+      {hint && !error && <p className="text-[10px] text-white/30 mt-1">{hint}</p>}
+    </div>
+  )
+}
+
 export function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
+  const [errors, setErrors] = useState({})
+  const [generalError, setGeneralError] = useState('')
   const [loading, setLoading] = useState(false)
   const { signIn, signInWithGoogle } = useAuthStore()
   const navigate = useNavigate()
 
+  // Initialize reCAPTCHA on mount
+  useEffect(() => {
+    initRecaptcha()
+  }, [])
+
+  const validateFields = () => {
+    const newErrors = {}
+    
+    const emailResult = validateEmail(email)
+    if (!emailResult.valid) {
+      newErrors.email = emailResult.errors[0]
+    }
+
+    if (!password) {
+      newErrors.password = 'Password is required'
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
-    setError('')
+    setGeneralError('')
+
+    // Rate limiting
+    const rateLimit = checkRateLimit('login', 5, 60000)
+    if (!rateLimit.allowed) {
+      setGeneralError(`Too many attempts. Please wait ${rateLimit.resetIn} seconds.`)
+      return
+    }
+
+    if (!validateFields()) return
+
     setLoading(true)
-    const { error } = await signIn(email, password)
+
+    // Execute reCAPTCHA (returns null if not configured)
+    const recaptchaToken = await executeRecaptcha('login')
+    
+    // Pass token to backend for verification (handled by Supabase or edge function)
+    const { error } = await signIn(email.trim().toLowerCase(), password, recaptchaToken)
+    
     if (error) {
-      setError(error.message || 'Failed to sign in')
+      setGeneralError(error.message || 'Invalid email or password')
       setLoading(false)
     } else {
       navigate('/dashboard')
@@ -60,9 +160,9 @@ export function LoginPage() {
   }
 
   const handleGoogleSignIn = async () => {
-    setError('')
+    setGeneralError('')
     const { error } = await signInWithGoogle()
-    if (error) setError(error.message || 'Failed to sign in with Google')
+    if (error) setGeneralError(error.message || 'Failed to sign in with Google')
   }
 
   return (
@@ -105,36 +205,34 @@ export function LoginPage() {
                 <div className="flex-1 h-px bg-white/[0.06]" />
               </div>
 
-              {error && (
+              {generalError && (
                 <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-[12px] text-red-400 mb-4">
-                  {error}
+                  {generalError}
                 </div>
               )}
 
-              <form onSubmit={handleSubmit} className="space-y-3">
-                <div>
-                  <label className="block text-[11px] text-white/40 mb-1.5">Email</label>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06] text-white placeholder-white/20 text-[13px] focus:outline-none focus:border-amber-500/50 transition-all"
-                    placeholder="you@example.com"
-                    required
-                  />
-                </div>
+              <form onSubmit={handleSubmit} className="space-y-3" noValidate>
+                <ValidatedInput
+                  label="Email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => { setEmail(e.target.value); setErrors(prev => ({...prev, email: ''})) }}
+                  placeholder="you@example.com"
+                  error={errors.email}
+                  required
+                  autoComplete="email"
+                />
 
-                <div>
-                  <label className="block text-[11px] text-white/40 mb-1.5">Password</label>
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06] text-white placeholder-white/20 text-[13px] focus:outline-none focus:border-amber-500/50 transition-all"
-                    placeholder="••••••••"
-                    required
-                  />
-                </div>
+                <ValidatedInput
+                  label="Password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => { setPassword(e.target.value); setErrors(prev => ({...prev, password: ''})) }}
+                  placeholder="••••••••"
+                  error={errors.password}
+                  required
+                  autoComplete="current-password"
+                />
 
                 <div className="pt-1">
                   <ShinyButton type="submit" disabled={loading}>
@@ -168,22 +266,76 @@ export function SignupPage() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
+  const [errors, setErrors] = useState({})
+  const [generalError, setGeneralError] = useState('')
+  const [passwordStrength, setPasswordStrength] = useState(0)
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const { signUp, signInWithGoogle } = useAuthStore()
 
+  // Initialize reCAPTCHA on mount
+  useEffect(() => {
+    initRecaptcha()
+  }, [])
+
+  const handlePasswordChange = (e) => {
+    const value = e.target.value
+    setPassword(value)
+    setErrors(prev => ({...prev, password: ''}))
+    
+    // Update password strength
+    const result = validatePassword(value)
+    setPasswordStrength(result.strength)
+  }
+
+  const validateFields = () => {
+    const newErrors = {}
+    
+    const nameResult = validateName(name)
+    if (!nameResult.valid) {
+      newErrors.name = nameResult.errors[0]
+    }
+
+    const emailResult = validateEmail(email)
+    if (!emailResult.valid) {
+      newErrors.email = emailResult.errors[0]
+    }
+
+    const passwordResult = validatePassword(password)
+    if (!passwordResult.valid) {
+      newErrors.password = passwordResult.errors[0]
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
-    setError('')
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters')
+    setGeneralError('')
+
+    // Rate limiting
+    const rateLimit = checkRateLimit('signup', 3, 60000)
+    if (!rateLimit.allowed) {
+      setGeneralError(`Too many attempts. Please wait ${rateLimit.resetIn} seconds.`)
       return
     }
+
+    if (!validateFields()) return
+
     setLoading(true)
-    const { error } = await signUp(email, password, { full_name: name })
+    
+    // Execute reCAPTCHA
+    const recaptchaToken = await executeRecaptcha('signup')
+    
+    // Sanitize inputs before sending
+    const sanitizedName = name.trim()
+    const sanitizedEmail = email.trim().toLowerCase()
+    
+    const { error } = await signUp(sanitizedEmail, password, { full_name: sanitizedName }, recaptchaToken)
+    
     if (error) {
-      setError(error.message || 'Failed to create account')
+      setGeneralError(error.message || 'Failed to create account')
       setLoading(false)
     } else {
       setSuccess(true)
@@ -191,9 +343,9 @@ export function SignupPage() {
   }
 
   const handleGoogleSignIn = async () => {
-    setError('')
+    setGeneralError('')
     const { error } = await signInWithGoogle()
-    if (error) setError(error.message || 'Failed to sign in with Google')
+    if (error) setGeneralError(error.message || 'Failed to sign in with Google')
   }
 
   if (success) {
@@ -273,48 +425,53 @@ export function SignupPage() {
                 <div className="flex-1 h-px bg-white/[0.06]" />
               </div>
 
-              {error && (
+              {generalError && (
                 <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-[12px] text-red-400 mb-4">
-                  {error}
+                  {generalError}
                 </div>
               )}
 
-              <form onSubmit={handleSubmit} className="space-y-3">
-                <div>
-                  <label className="block text-[11px] text-white/40 mb-1.5">Full Name</label>
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06] text-white placeholder-white/20 text-[13px] focus:outline-none focus:border-amber-500/50 transition-all"
-                    placeholder="John Doe"
-                    required
-                  />
-                </div>
+              <form onSubmit={handleSubmit} className="space-y-3" noValidate>
+                <ValidatedInput
+                  label="Full Name"
+                  type="text"
+                  value={name}
+                  onChange={(e) => { setName(e.target.value); setErrors(prev => ({...prev, name: ''})) }}
+                  placeholder="John Doe"
+                  error={errors.name}
+                  required
+                  autoComplete="name"
+                />
 
-                <div>
-                  <label className="block text-[11px] text-white/40 mb-1.5">Email</label>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06] text-white placeholder-white/20 text-[13px] focus:outline-none focus:border-amber-500/50 transition-all"
-                    placeholder="you@example.com"
-                    required
-                  />
-                </div>
+                <ValidatedInput
+                  label="Email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => { setEmail(e.target.value); setErrors(prev => ({...prev, email: ''})) }}
+                  placeholder="you@example.com"
+                  error={errors.email}
+                  required
+                  autoComplete="email"
+                />
 
                 <div>
                   <label className="block text-[11px] text-white/40 mb-1.5">Password</label>
                   <input
                     type="password"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06] text-white placeholder-white/20 text-[13px] focus:outline-none focus:border-amber-500/50 transition-all"
+                    onChange={handlePasswordChange}
+                    className={`w-full px-3.5 py-2.5 rounded-xl bg-white/[0.03] border text-white placeholder-white/20 text-[13px] focus:outline-none transition-all ${
+                      errors.password 
+                        ? 'border-red-500/50 focus:border-red-500' 
+                        : 'border-white/[0.06] focus:border-amber-500/50'
+                    }`}
                     placeholder="••••••••"
                     required
+                    autoComplete="new-password"
                   />
-                  <p className="text-[10px] text-white/30 mt-1">Must be at least 6 characters</p>
+                  {errors.password && <p className="text-[10px] text-red-400 mt-1">{errors.password}</p>}
+                  {!errors.password && password && <PasswordStrength strength={passwordStrength} />}
+                  {!errors.password && !password && <p className="text-[10px] text-white/30 mt-1">Must be at least 6 characters</p>}
                 </div>
 
                 <div className="pt-1">
