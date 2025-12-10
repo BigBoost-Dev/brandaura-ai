@@ -61,7 +61,7 @@ export default function TopicTrackingWizard({ userId, onComplete, onCancel }) {
 
   // Auto-generate prompts on step 5
   useEffect(() => {
-    if (step === 5 && prompts.length === 0 && selectedTopics.length > 0 && !generating) {
+    if (step === 5 && prompts.length === 0 && selectedTopics.length > 0) {
       generatePrompts()
     }
   }, [step, selectedTopics])
@@ -69,22 +69,11 @@ export default function TopicTrackingWizard({ userId, onComplete, onCancel }) {
   const generateCompetitors = async () => {
     setGenerating(true)
     
-    // Set a timeout - if API takes too long, use fallback
-    const timeout = setTimeout(() => {
-      console.log('Competitor generation timed out, using fallback')
-      setCompetitors([
-        { name: 'Competitor 1' }, 
-        { name: 'Competitor 2' },
-        { name: 'Competitor 3' }
-      ])
-      setGenerating(false)
-    }, 10000) // 10 second timeout
-    
     try {
       const result = await queryAI('openai/gpt-4o-mini', 
-        `List 5 competitors for ${website} in ${industry}. Return ONLY a JSON array: [{"name":"Company Name","domain":"domain.com"}]`
+        `List 5 competitors for ${website} in ${industry}. JSON only: [{"name":"Company Name"}]`,
+        10000 // 10 second timeout
       )
-      clearTimeout(timeout)
       
       if (result?.success && result?.response) {
         const match = result.response.match(/\[[\s\S]*?\]/)
@@ -99,71 +88,130 @@ export default function TopicTrackingWizard({ userId, onComplete, onCancel }) {
           } catch (e) {}
         }
       }
-      // API returned but no valid data - use fallback
-      setCompetitors([
-        { name: 'Competitor 1' }, 
-        { name: 'Competitor 2' },
-        { name: 'Competitor 3' }
-      ])
-      setGenerating(false)
     } catch (e) { 
-      clearTimeout(timeout)
       console.error('Generate competitors error:', e) 
-      // Fallback on error
-      setCompetitors([
-        { name: 'Competitor 1' }, 
-        { name: 'Competitor 2' },
-        { name: 'Competitor 3' }
-      ])
-      setGenerating(false)
     }
+    
+    // Fallback
+    setCompetitors([
+      { name: 'Competitor 1' }, 
+      { name: 'Competitor 2' },
+      { name: 'Competitor 3' }
+    ])
+    setGenerating(false)
   }
 
   const generatePrompts = async () => {
     setGenerating(true)
     const selectedTopicNames = topics.filter(t => selectedTopics.includes(t.id))
-    const allPrompts = []
+    const brand = brandName || website
+    const compNames = competitors.map(c => c.name).slice(0, 3)
     
-    for (const topic of selectedTopicNames) {
-      try {
-        const result = await queryAI('openai/gpt-4o-mini',
-          `Generate 5 search prompts about "${topic.name}" for ${brandName || website} in ${industry}. Mix branded and unbranded queries. Return ONLY JSON: [{"text":"prompt text","type":"branded"}]`
-        )
-        if (result?.success && result?.response) {
-          const match = result.response.match(/\[[\s\S]*?\]/)
-          if (match) {
-            try {
-              const parsed = JSON.parse(match[0])
-              if (Array.isArray(parsed)) {
-                allPrompts.push(...parsed.map((p, i) => ({
-                  ...p,
-                  id: `${topic.id}-${i}`,
-                  topicId: topic.id,
-                  topicName: topic.name
-                })))
-              }
-            } catch (e) {}
+    try {
+      const result = await queryAI('openai/gpt-4o-mini',
+        `Generate 20 search prompts for "${brand}" (${industry}). Topics: ${selectedTopicNames.map(t => t.name).join(', ')}. Competitors: ${compNames.join(', ') || 'none'}.
+Mix: branded (about ${brand}), unbranded (general), comparison (${brand} vs competitors).
+JSON only: [{"text":"prompt","type":"branded|unbranded|comparison","topic":"topic"}]`,
+        10000 // 10 second timeout
+      )
+      
+      if (result?.success && result?.response) {
+        const match = result.response.match(/\[[\s\S]*?\]/)
+        if (match) {
+          try {
+            const parsed = JSON.parse(match[0])
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              const allPrompts = parsed.map((p, i) => {
+                const topic = selectedTopicNames.find(t => 
+                  t.name.toLowerCase() === (p.topic || '').toLowerCase()
+                ) || selectedTopicNames[0]
+                return {
+                  id: `prompt-${i}`,
+                  topicId: topic?.id,
+                  topicName: topic?.name || p.topic,
+                  text: p.text,
+                  type: p.type || 'unbranded'
+                }
+              })
+              setPrompts(allPrompts)
+              setGenerating(false)
+              return
+            }
+          } catch (e) {
+            console.error('Parse error:', e)
           }
         }
-      } catch (e) {
-        console.error('Generate prompts error:', e)
       }
+      // Fallback
+      generateFallbackPrompts()
+    } catch (e) {
+      console.error('Generate prompts error:', e)
+      generateFallbackPrompts()
     }
+  }
+  
+  const generateFallbackPrompts = () => {
+    const selectedTopicNames = topics.filter(t => selectedTopics.includes(t.id))
+    const allPrompts = []
+    const brand = brandName || website
+    const compNames = competitors.map(c => c.name)
     
-    // Fallback if no prompts generated
-    if (allPrompts.length === 0) {
-      selectedTopicNames.forEach(topic => {
-        for (let i = 0; i < 5; i++) {
+    selectedTopicNames.forEach(topic => {
+      const topicLower = topic.name.toLowerCase()
+      let promptId = 0
+      
+      // Branded
+      allPrompts.push({
+        id: `${topic.id}-${promptId++}`,
+        topicId: topic.id,
+        topicName: topic.name,
+        text: `What is ${brand}'s ${topicLower}?`,
+        type: 'branded'
+      })
+      allPrompts.push({
+        id: `${topic.id}-${promptId++}`,
+        topicId: topic.id,
+        topicName: topic.name,
+        text: `Is ${brand} good for ${topicLower}?`,
+        type: 'branded'
+      })
+      
+      // Unbranded
+      allPrompts.push({
+        id: `${topic.id}-${promptId++}`,
+        topicId: topic.id,
+        topicName: topic.name,
+        text: `What are the best ${topicLower} options in ${industry}?`,
+        type: 'unbranded'
+      })
+      allPrompts.push({
+        id: `${topic.id}-${promptId++}`,
+        topicId: topic.id,
+        topicName: topic.name,
+        text: `Top ${industry} companies for ${topicLower}`,
+        type: 'unbranded'
+      })
+      
+      // Comparison
+      if (compNames.length > 0) {
+        allPrompts.push({
+          id: `${topic.id}-${promptId++}`,
+          topicId: topic.id,
+          topicName: topic.name,
+          text: `${brand} vs ${compNames[0]} for ${topicLower}`,
+          type: 'comparison'
+        })
+        if (compNames.length > 1) {
           allPrompts.push({
-            id: `${topic.id}-${i}`,
+            id: `${topic.id}-${promptId++}`,
             topicId: topic.id,
             topicName: topic.name,
-            text: `What are the best ${topic.name.toLowerCase()} options?`,
-            type: i % 2 === 0 ? 'branded' : 'unbranded'
+            text: `Compare ${brand} and ${compNames[1]} ${topicLower}`,
+            type: 'comparison'
           })
         }
-      })
-    }
+      }
+    })
     
     setPrompts(allPrompts)
     setGenerating(false)
@@ -202,6 +250,12 @@ export default function TopicTrackingWizard({ userId, onComplete, onCancel }) {
     setLoading(true)
     setError('')
     
+    // Force close after 5 seconds regardless
+    const forceClose = setTimeout(() => {
+      console.log('Force closing wizard - save may continue in background')
+      if (onComplete) onComplete()
+    }, 5000)
+    
     try {
       const sanitize = (str) => String(str || '').trim().slice(0, 500)
       
@@ -230,9 +284,11 @@ export default function TopicTrackingWizard({ userId, onComplete, onCancel }) {
         website: cleanWebsite,
         brand_names: cleanBrandName ? [cleanBrandName] : [],
         industry: industry,
-        competitors: competitors.map(c => c.domain || c.name),
+        competitors: competitors.map(c => c.name),
         settings
       })
+      
+      clearTimeout(forceClose)
       
       if (newBrand?.id) {
         setActiveBrand(newBrand.id)
@@ -240,9 +296,9 @@ export default function TopicTrackingWizard({ userId, onComplete, onCancel }) {
       
       if (onComplete) onComplete()
     } catch (e) {
+      clearTimeout(forceClose)
       console.error('Save error:', e)
       setError(e?.message || 'Failed to save. Please try again.')
-    } finally {
       setLoading(false)
     }
   }
@@ -510,22 +566,7 @@ export default function TopicTrackingWizard({ userId, onComplete, onCancel }) {
                     <span className="ml-2">Generating prompts...</span>
                   </div>
                   <button 
-                    onClick={() => {
-                      const fallbackPrompts = []
-                      topics.filter(t => selectedTopics.includes(t.id)).forEach(topic => {
-                        for (let i = 0; i < 5; i++) {
-                          fallbackPrompts.push({
-                            id: `${topic.id}-${i}`,
-                            topicId: topic.id,
-                            topicName: topic.name,
-                            text: `What are the best ${topic.name.toLowerCase()} options?`,
-                            type: i % 2 === 0 ? 'branded' : 'unbranded'
-                          })
-                        }
-                      })
-                      setPrompts(fallbackPrompts)
-                      setGenerating(false)
-                    }}
+                    onClick={() => generateFallbackPrompts()}
                     className="mt-4 text-[13px] text-amber-400 hover:text-amber-300"
                   >
                     Skip and use default prompts
@@ -539,7 +580,11 @@ export default function TopicTrackingWizard({ userId, onComplete, onCancel }) {
                         <div className="text-[13px] text-white/70">{prompt.text}</div>
                         <div className="flex gap-2 mt-2">
                           <span className={`text-[11px] px-2 py-0.5 rounded ${
-                            prompt.type === 'branded' ? 'bg-amber-500/10 text-amber-400' : 'bg-white/[0.05] text-white/40'
+                            prompt.type === 'branded' 
+                              ? 'bg-amber-500/10 text-amber-400' 
+                              : prompt.type === 'comparison'
+                              ? 'bg-blue-500/10 text-blue-400'
+                              : 'bg-white/[0.05] text-white/40'
                           }`}>
                             {prompt.type}
                           </span>
@@ -602,6 +647,14 @@ export default function TopicTrackingWizard({ userId, onComplete, onCancel }) {
                     {prompts.length * selectedEngines.length}
                   </div>
                 </div>
+                
+                {loading && (
+                  <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20">
+                    <p className="text-[13px] text-blue-400">
+                      Setting up your brand... This will close automatically.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -641,7 +694,7 @@ export default function TopicTrackingWizard({ userId, onComplete, onCancel }) {
               className="flex items-center gap-2 px-6 py-2.5 rounded-xl font-medium bg-gradient-to-r from-amber-400 to-orange-500 text-black hover:brightness-110 disabled:opacity-50"
             >
               {loading ? Icons.loader : Icons.check}
-              <span>{loading ? 'Creating...' : 'Start Tracking'}</span>
+              <span>{loading ? 'Saving...' : 'Start Tracking'}</span>
             </button>
           )}
         </div>
