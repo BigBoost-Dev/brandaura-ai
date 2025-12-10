@@ -5,22 +5,22 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
 
 /**
  * Query AI through the secure backend proxy
- * Session is passed in to avoid repeated getSession calls
+ * NEVER call OpenRouter directly from frontend
  */
-export async function queryAI(model, query, session, timeoutMs = 30000) {
-  console.log(`[queryAI] Starting: ${model}`)
-  
-  if (!session?.access_token) {
-    console.log('[queryAI] No session provided')
-    return { success: false, error: 'Not authenticated' }
-  }
+export async function queryAI(model, query, timeoutMs = 45000) {
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
   
   try {
-    console.log('[queryAI] Fetching...')
+    // Get current session
+    const { data: { session } } = await supabase.auth.getSession()
     
-    const controller = new AbortController()
-    const fetchTimeout = setTimeout(() => controller.abort(), timeoutMs)
-    
+    if (!session) {
+      clearTimeout(timeoutId)
+      return { success: false, error: 'Not authenticated' }
+    }
+
+    // Call our secure Edge Function (API key is stored server-side)
     const response = await fetch(`${SUPABASE_URL}/functions/v1/query-ai`, {
       method: 'POST',
       headers: {
@@ -30,17 +30,15 @@ export async function queryAI(model, query, session, timeoutMs = 30000) {
       body: JSON.stringify({ model, query }),
       signal: controller.signal
     })
-    
-    clearTimeout(fetchTimeout)
-    console.log(`[queryAI] Response: ${response.status}`)
+
+    clearTimeout(timeoutId)
 
     if (!response.ok) {
-      const errorText = await response.text()
-      return { success: false, error: errorText || `API error: ${response.status}` }
+      const error = await response.json()
+      return { success: false, error: error.error || `API error: ${response.status}` }
     }
 
     const data = await response.json()
-    console.log(`[queryAI] Success, length: ${data.choices?.[0]?.message?.content?.length || 0}`)
     
     return {
       success: true,
@@ -49,25 +47,11 @@ export async function queryAI(model, query, session, timeoutMs = 30000) {
       cost: data.usage ? (data.usage.prompt_tokens * 0.000001 + data.usage.completion_tokens * 0.000002) : 0
     }
   } catch (error) {
+    clearTimeout(timeoutId)
     if (error.name === 'AbortError') {
-      console.log(`[queryAI] Timed out after ${timeoutMs/1000}s`)
-      return { success: false, error: `Timed out (${timeoutMs/1000}s)` }
+      return { success: false, error: 'Request timed out' }
     }
-    console.error('[queryAI] Error:', error.message)
     return { success: false, error: error.message }
-  }
-}
-
-/**
- * Get current session - call this ONCE before starting tracking
- */
-export async function getAuthSession() {
-  try {
-    const { data: { session } } = await supabase.auth.getSession()
-    return session
-  } catch (err) {
-    console.error('[getAuthSession] Error:', err)
-    return null
   }
 }
 

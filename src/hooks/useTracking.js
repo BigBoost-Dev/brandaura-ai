@@ -1,12 +1,11 @@
 import { useState, useRef, useCallback } from 'react'
-import { queryAI, analyzeResponse, getAuthSession } from '../lib/api'
+import { queryAI, analyzeResponse } from '../lib/api'
 import { extractSources } from '../lib/aiAnalysis'
 import { AI_SEARCH_ENGINES } from '../lib/constants'
 import { useResultsStore } from './useStore'
 
 /**
  * Hook for running AI tracking based on Topic Wizard configuration
- * Uses brand.settings.prompts and brand.settings.engines
  */
 export function useTracking() {
   const [isRunning, setIsRunning] = useState(false)
@@ -20,15 +19,7 @@ export function useTracking() {
   }, [])
 
   const runTracking = useCallback(async (brand, userId) => {
-    console.log('runTracking called', { brand: brand?.name, userId, isRunning })
-    if (isRunning || !brand || !userId) {
-      console.log('runTracking early return:', { isRunning, brand: !!brand, userId: !!userId })
-      return
-    }
-    
-    // Set running state FIRST
-    setIsRunning(true)
-    setLogs([])
+    if (isRunning || !brand || !userId) return
     
     // Parse settings if it's a JSON string
     let settings = brand.settings || {}
@@ -42,29 +33,12 @@ export function useTracking() {
 
     if (prompts.length === 0) {
       addLog('❌ No prompts configured. Use Topic Wizard to set up tracking.', 'error')
-      setIsRunning(false)
       return
     }
-
-    // Get session ONCE before starting
-    addLog('🔑 Getting authentication...', 'info')
-    let session
-    try {
-      session = await getAuthSession()
-    } catch (err) {
-      addLog(`❌ Auth error: ${err.message}`, 'error')
-      setIsRunning(false)
-      return
-    }
-    
-    if (!session) {
-      addLog('❌ Not authenticated. Please log in again.', 'error')
-      setIsRunning(false)
-      return
-    }
-    addLog('✅ Authenticated', 'info')
 
     abortRef.current = new AbortController()
+    setIsRunning(true)
+    setLogs([])
     
     const totalQueries = prompts.length * engines.length
     setProgress({ current: 0, total: totalQueries, percentage: 0, prompt: '', engine: '' })
@@ -89,8 +63,6 @@ export function useTracking() {
           continue
         }
 
-        console.log(`[Loop] ${queryIndex}/${totalQueries} - ${engine.name}`)
-
         setProgress({
           current: queryIndex,
           total: totalQueries,
@@ -100,62 +72,54 @@ export function useTracking() {
         })
 
         try {
-          const { success, response, cost, error } = await queryAI(engine.model, prompt.text, session, 30000)
-          console.log(`[Loop] queryAI returned: success=${success}`)
+          const { success, response, cost, error } = await queryAI(engine.model, prompt.text, 45000)
 
           if (abortRef.current?.signal.aborted) break
 
           if (success && response) {
+            // Parse competitors if it's a JSON string
+            let parsedCompetitors = brand.competitors || []
+            if (typeof parsedCompetitors === 'string') {
+              try { parsedCompetitors = JSON.parse(parsedCompetitors) } catch {}
+            }
+            parsedCompetitors = parsedCompetitors.map(c => typeof c === 'object' ? c.name : c)
+            
+            const analysis = analyzeResponse(response, brand.name, parsedCompetitors)
+            
+            // Extract sources from response
+            let sources = []
             try {
-              // Parse competitors if it's a JSON string
-              let parsedCompetitors = brand.competitors || []
-              if (typeof parsedCompetitors === 'string') {
-                try { parsedCompetitors = JSON.parse(parsedCompetitors) } catch {}
-              }
-              parsedCompetitors = parsedCompetitors.map(c => typeof c === 'object' ? c.name : c)
-              
-              const analysis = analyzeResponse(response, brand.name, parsedCompetitors)
-              
-              // Extract sources from response
-              let sources = []
-              try {
-                sources = extractSources(response, analysis.citedUrls || [])
-              } catch (e) {
-                // Silently ignore source extraction errors
-              }
-              
-              // Find topic info
-              const topic = topics.find(t => t.id === prompt.topicId) || {}
+              sources = extractSources(response, analysis.citedUrls || [])
+            } catch (e) {
+              // Ignore source extraction errors
+            }
+            
+            // Find topic info
+            const topic = topics.find(t => t.id === prompt.topicId) || {}
 
-              results.push({
-                brand_id: brand.id,
-                user_id: userId,
-                batch_id: batchId,
-                // Engine info
-                platform_id: engineId,
-                platform_name: engine.name,
-                model: engine.model,
-                // Query info
-                query: prompt.text,
-              query_type: prompt.type || 'branded',
-              // Topic info
-              topic_id: prompt.topicId,
-              topic_name: prompt.topicName || topic.name,
-              prompt_persona: prompt.persona,
-              prompt_intent: prompt.intent,
-              // Analysis
-              brand_mention: analysis.brandMention,
+            results.push({
+              brand_id: brand.id,
+              user_id: userId,
+              batch_id: batchId,
+              platform_id: engineId,
+              platform_name: engine.name,
+              model: engine.model,
+              query: prompt.text,
+              query_type: prompt.type || 'general',
+              topic_id: prompt.topicId || null,
+              topic_name: prompt.topicName || topic.name || 'General',
+              response_text: response,
+              brand_mentioned: analysis.brandMention !== 'notMentioned',
+              mention_type: analysis.brandMention,
               brand_position: analysis.brandPosition,
-              sentiment: analysis.sentiment,
-              confidence: analysis.confidence,
               mention_count: analysis.mentionCount,
+              sentiment: analysis.sentiment,
+              confidence_score: analysis.confidence,
               competitor_mentions: analysis.competitorMentions,
-              snippet: analysis.snippet,
-              full_response: response,
-              // Source attribution (NEW!)
-              cited_urls: analysis.citedUrls || [],
+              cited_urls: analysis.citedUrls,
               sources: sources,
-              // Meta
+              snippet: analysis.snippet,
+              word_count: analysis.wordCount,
               cost: cost || 0,
               created_at: new Date().toISOString()
             })
@@ -167,28 +131,20 @@ export function useTracking() {
             
             addLog(`${emoji} ${engine.name}: ${analysis.brandMention} (${prompt.topicName || 'General'})`, 'info')
             
-            // Log sources if found
             if (sources.length > 0) {
               addLog(`   📎 Sources: ${sources.map(s => s.name).join(', ')}`, 'info')
-            }
-            } catch (analysisErr) {
-              console.error('Analysis error:', analysisErr)
-              addLog(`⚠️ ${engine.name}: Response received but analysis failed`, 'warning')
             }
           } else {
             addLog(`❌ ${engine.name}: ${error || 'No response'}`, 'error')
           }
         } catch (err) {
           if (err.name === 'AbortError') break
-          console.error('Query error:', err)
           addLog(`❌ ${engine.name}: ${err.message}`, 'error')
         }
 
-        // Short delay between queries (1 second)
+        // Delay between queries
         if (!abortRef.current?.signal.aborted) {
-          console.log(`[Loop] Waiting 1s...`)
-          await new Promise(r => setTimeout(r, 1000))
-          console.log(`[Loop] Continuing...`)
+          await new Promise(r => setTimeout(r, 2000))
         }
       }
     }
@@ -203,27 +159,15 @@ export function useTracking() {
       }
     }
 
-    // Calculate summary
-    const mentioned = results.filter(r => r.brand_mention !== 'notMentioned').length
-    const leaders = results.filter(r => r.brand_mention === 'leader').length
-    const totalSources = results.reduce((sum, r) => sum + (r.sources?.length || 0), 0)
-    addLog(`📊 Summary: ${mentioned}/${results.length} mentions (${leaders} top picks)`, 'success')
-    addLog(`🔗 Identified ${totalSources} source citations`, 'success')
-
-    abortRef.current = null
     setIsRunning(false)
-    setProgress({ current: 0, total: 0, percentage: 0, prompt: '', engine: '' })
-
-    return results
+    addLog('🏁 Tracking complete', 'success')
   }, [isRunning, addLog, addResults])
 
   const stopTracking = useCallback(() => {
     if (abortRef.current) {
       abortRef.current.abort()
-      abortRef.current = null
       setIsRunning(false)
-      setProgress({ current: 0, total: 0, percentage: 0, prompt: '', engine: '' })
-      addLog('⏹ Tracking stopped', 'warning')
+      addLog('⏹️ Tracking stopped', 'warning')
     }
   }, [addLog])
 
