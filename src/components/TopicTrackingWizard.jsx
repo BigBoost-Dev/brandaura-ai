@@ -29,40 +29,51 @@ export default function TopicTrackingWizard({ userId, onComplete, onCancel, edit
   
   const isEditMode = !!editBrand
   
+  // Parse JSON strings from DB
+  const parseJSON = (val, fallback = []) => {
+    if (!val) return fallback
+    if (Array.isArray(val)) return val
+    if (typeof val === 'object') return val
+    try { return JSON.parse(val) } catch { return fallback }
+  }
+  
+  // Parse competitors and settings from editBrand
+  const parsedCompetitors = parseJSON(editBrand?.competitors, [])
+  const parsedSettings = parseJSON(editBrand?.settings, {})
+  const parsedEngines = parseJSON(editBrand?.selected_platforms, parsedSettings?.engines || ['chatgpt-auto', 'perplexity', 'gemini'])
+  
   const [step, setStep] = useState(1)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [generating, setGenerating] = useState(false)
 
   // Step 1
-  const [website, setWebsite] = useState(editBrand?.website || '')
+  const [website, setWebsite] = useState(editBrand?.website || editBrand?.domain || '')
   const [brandName, setBrandName] = useState(editBrand?.name || '')
-  const [industry, setIndustry] = useState(editBrand?.industry || 'Digital Marketing')
+  const [industry, setIndustry] = useState(editBrand?.industry || editBrand?.category || 'Digital Marketing')
   
-  // Step 2
+  // Step 2 - competitors can be [{name: "..."}] or ["..."]
   const [competitors, setCompetitors] = useState(
-    editBrand?.competitors?.map(c => typeof c === 'string' ? { name: c } : c) || []
+    parsedCompetitors.map(c => typeof c === 'string' ? { name: c } : c)
   )
   const [competitorInput, setCompetitorInput] = useState('')
   
   // Step 3
-  const [selectedEngines, setSelectedEngines] = useState(
-    editBrand?.settings?.engines || ['chatgpt-auto', 'perplexity', 'gemini']
-  )
+  const [selectedEngines, setSelectedEngines] = useState(parsedEngines)
   
   // Step 4
   const [topics, setTopics] = useState(
-    editBrand?.settings?.topics?.length > 0 
-      ? [...DEFAULT_TOPICS, ...editBrand.settings.topics.filter(t => !DEFAULT_TOPICS.find(d => d.id === t.id))]
+    parsedSettings?.topics?.length > 0 
+      ? [...DEFAULT_TOPICS, ...parsedSettings.topics.filter(t => !DEFAULT_TOPICS.find(d => d.id === t.id))]
       : [...DEFAULT_TOPICS]
   )
   const [selectedTopics, setSelectedTopics] = useState(
-    editBrand?.settings?.topics?.map(t => t.id) || ['t1', 't2', 't3']
+    parsedSettings?.topics?.map(t => t.id) || ['t1', 't2', 't3']
   )
   const [topicInput, setTopicInput] = useState('')
   
   // Step 5
-  const [prompts, setPrompts] = useState(editBrand?.settings?.prompts || [])
+  const [prompts, setPrompts] = useState(parsedSettings?.prompts || [])
 
   // Auto-generate competitors on step 2 (only for new brands)
   useEffect(() => {
@@ -295,26 +306,17 @@ JSON only: [{"text":"prompt","type":"branded|unbranded|comparison","topic":"topi
         settings
       }
       
-      console.log('=== SAVING BRAND ===')
-      console.log('userId:', userId)
-      console.log('brandData:', JSON.stringify(brandData, null, 2))
-      
       if (isEditMode && editBrand?.id) {
-        console.log('Updating brand:', editBrand.id)
-        const result = await updateBrand(editBrand.id, brandData)
-        console.log('Update result:', result)
+        await updateBrand(editBrand.id, brandData)
       } else {
-        console.log('Creating new brand...')
         const newBrand = await addBrand({ user_id: userId, ...brandData })
-        console.log('Create result:', newBrand)
         if (newBrand?.id) setActiveBrand(newBrand.id)
       }
       
-      console.log('=== SAVE COMPLETE ===')
       if (userId) await loadBrands(userId)
       if (onComplete) onComplete()
     } catch (e) {
-      console.error('=== SAVE ERROR ===', e)
+      console.error('Save error:', e)
       setError(e?.message || 'Failed to save. Please try again.')
     } finally {
       setLoading(false)

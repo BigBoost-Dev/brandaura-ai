@@ -150,12 +150,9 @@ export const useBrandsStore = create(
 
       // Add brand
       addBrand: async (brand) => {
-        console.log('Store addBrand called:', brand)
         try {
           set({ loading: true, error: null })
-          console.log('Calling db.brands.create...')
           const newBrand = await db.brands.create(brand)
-          console.log('db.brands.create returned:', newBrand)
           set(state => ({ 
             brands: [...state.brands, newBrand],
             activeBrandId: newBrand.id,
@@ -163,7 +160,6 @@ export const useBrandsStore = create(
           }))
           return newBrand
         } catch (error) {
-          console.error('Store addBrand error:', error)
           set({ error: error.message, loading: false })
           throw error
         }
