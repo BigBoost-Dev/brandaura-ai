@@ -60,12 +60,12 @@ export const AI_PLATFORMS = {
 export const AI_SEARCH_ENGINES = {
   'chatgpt-auto': {
     id: 'chatgpt-auto',
-    name: 'ChatGPT (Auto)',
-    model: 'openai/gpt-4o',
-    credits: 1,
+    name: 'ChatGPT',
+    model: 'openai/gpt-4o-mini',
+    credits: 0.5,
     color: '#10a37f',
     icon: '◈',
-    description: 'Automatic mode selection'
+    description: 'Fast and affordable'
   },
   'chatgpt-search': {
     id: 'chatgpt-search',
@@ -106,8 +106,8 @@ export const AI_SEARCH_ENGINES = {
   'perplexity': {
     id: 'perplexity',
     name: 'Perplexity',
-    model: 'perplexity/sonar-pro',
-    credits: 0.2,
+    model: 'perplexity/sonar',
+    credits: 0.3,
     color: '#22d3ee',
     icon: '◉',
     description: 'Real-time search AI'

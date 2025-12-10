@@ -140,9 +140,9 @@ export function useTracking() {
           addLog(`❌ ${engine.name}: ${err.message}`, 'error')
         }
 
-        // Rate limiting delay between queries (3 seconds to avoid 429 errors)
+        // Rate limiting delay between queries (5 seconds to avoid 429 errors)
         if (!abortRef.current?.signal.aborted) {
-          await new Promise(r => setTimeout(r, 3000))
+          await new Promise(r => setTimeout(r, 5000))
         }
       }
     }
