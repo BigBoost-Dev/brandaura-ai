@@ -266,6 +266,19 @@ const Icons = {
   ),
 }
 
+// Custom Tooltip for Charts
+function CustomTooltip({ active, payload, label }) {
+  if (!active || !payload?.length) return null
+  return (
+    <div className="px-3 py-2 rounded-lg bg-[#1a1a1f] border border-white/[0.1] shadow-xl">
+      <div className="text-[11px] text-white/40 mb-1">{label}</div>
+      <div className="text-[14px] font-semibold text-amber-400">
+        {payload[0].value}%
+      </div>
+    </div>
+  )
+}
+
 // Bento Card Component
 function BentoCard({ children, className = '', size = 'default' }) {
   const sizes = {
@@ -428,14 +441,8 @@ function DashboardView({ metrics, activeBrand, onRunTests, isRunning, onOpenTopi
                   axisLine={false}
                 />
                 <Tooltip 
-                  contentStyle={{ 
-                    background: 'rgba(9,9,11,0.95)', 
-                    border: '1px solid rgba(255,255,255,0.1)', 
-                    borderRadius: '12px',
-                    boxShadow: '0 8px 32px rgba(0,0,0,0.4)'
-                  }}
-                  labelStyle={{ color: 'rgba(255,255,255,0.5)' }}
-                  itemStyle={{ color: '#f59e0b' }}
+                  content={<CustomTooltip />}
+                  cursor={{ stroke: 'rgba(255,255,255,0.1)', strokeWidth: 1 }}
                 />
                 <Area 
                   type="monotone" 
@@ -594,6 +601,8 @@ function DashboardView({ metrics, activeBrand, onRunTests, isRunning, onOpenTopi
 
 // Results View
 function ResultsView({ results }) {
+  const [expandedResult, setExpandedResult] = useState(null)
+  
   if (!results.length) {
     return (
       <BentoCard size="large" className="text-center max-w-lg mx-auto">
@@ -608,23 +617,62 @@ function ResultsView({ results }) {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-xl font-semibold text-white mb-6">Test Results</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-semibold text-white">Test Results</h2>
+        <span className="text-[13px] text-white/40">{results.length} total</span>
+      </div>
       <div className="space-y-3">
         {results.slice(0, 50).map((result, i) => (
-          <BentoCard key={i} size="small">
-            <div className="flex items-start justify-between gap-4">
+          <BentoCard key={i} size="small" className="cursor-pointer hover:border-white/[0.12] transition">
+            <div 
+              className="flex items-start justify-between gap-4"
+              onClick={() => setExpandedResult(expandedResult === i ? null : i)}
+            >
               <div className="flex-1 min-w-0">
-                <p className="text-[14px] text-white/80 truncate">{result.query}</p>
-                <p className="text-[12px] text-white/40 mt-1">{result.platform} • {result.model}</p>
+                <p className="text-[14px] text-white/80">{result.query}</p>
+                <p className="text-[12px] text-white/40 mt-1">{result.platform} • {result.model} • {new Date(result.created_at).toLocaleDateString()}</p>
               </div>
-              <span className={`px-2.5 py-1 rounded-lg text-[12px] font-medium ${
+              <span className={`px-2.5 py-1 rounded-lg text-[12px] font-medium flex-shrink-0 ${
                 result.mention_type === 'leader' ? 'bg-emerald-500/10 text-emerald-400' :
                 result.mention_type === 'mentioned' ? 'bg-amber-500/10 text-amber-400' :
                 'bg-white/[0.05] text-white/40'
               }`}>
-                {result.mention_type || 'Not Found'}
+                {result.mention_type === 'leader' ? 'Top Pick' : 
+                 result.mention_type === 'mentioned' ? 'Mentioned' : 'Not Found'}
               </span>
             </div>
+            
+            {/* Expanded View */}
+            {expandedResult === i && (
+              <div className="mt-4 pt-4 border-t border-white/[0.06]">
+                <div className="mb-3">
+                  <span className="text-[11px] text-white/30 uppercase tracking-wide">AI Response</span>
+                </div>
+                <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.04] max-h-64 overflow-y-auto">
+                  <p className="text-[13px] text-white/60 leading-relaxed whitespace-pre-wrap">
+                    {result.response || result.raw_response || 'No response content available'}
+                  </p>
+                </div>
+                {result.sources && result.sources.length > 0 && (
+                  <div className="mt-3">
+                    <span className="text-[11px] text-white/30 uppercase tracking-wide">Sources Cited</span>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {result.sources.map((src, j) => (
+                        <a 
+                          key={j} 
+                          href={src} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-[12px] text-amber-400/70 hover:text-amber-400 truncate max-w-[200px]"
+                        >
+                          {src}
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </BentoCard>
         ))}
       </div>

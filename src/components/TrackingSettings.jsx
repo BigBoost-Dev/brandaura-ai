@@ -1,11 +1,32 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { useBrandsStore } from '../hooks/useStore'
 
-const FREQUENCIES = [
-  { id: 'daily', label: 'Daily', desc: 'Run every 24 hours' },
-  { id: 'weekly', label: 'Weekly', desc: 'Run every 7 days' },
-  { id: 'monthly', label: 'Monthly', desc: 'Run every 30 days' }
-]
+const Icons = {
+  clock: <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
+  bell: <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>,
+  mail: <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>,
+  check: <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>,
+}
+
+function Card({ children, className = '' }) {
+  return <div className={`rounded-2xl bg-white/[0.02] border border-white/[0.06] ${className}`}>{children}</div>
+}
+
+function Toggle({ checked, onChange, disabled }) {
+  return (
+    <button
+      onClick={() => !disabled && onChange(!checked)}
+      disabled={disabled}
+      className={`w-11 h-6 rounded-full transition-colors relative ${
+        disabled ? 'opacity-50 cursor-not-allowed' : ''
+      } ${
+        checked ? 'bg-amber-500' : 'bg-white/10'
+      }`}
+    >
+      <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${checked ? 'left-6' : 'left-1'}`} />
+    </button>
+  )
+}
 
 export default function TrackingSettings({ brand, userId, onSave }) {
   const { updateBrand } = useBrandsStore()
@@ -14,12 +35,6 @@ export default function TrackingSettings({ brand, userId, onSave }) {
   
   const settings = brand?.settings || {}
   
-  // Scheduling settings
-  const [frequency, setFrequency] = useState(settings.frequency || 'weekly')
-  const [scheduledTime, setScheduledTime] = useState(settings.scheduledTime || '09:00')
-  const [timezone, setTimezone] = useState(settings.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone)
-  
-  // Alert settings
   const [alertsEnabled, setAlertsEnabled] = useState(settings.alerts?.enabled || false)
   const [alertEmail, setAlertEmail] = useState(settings.alerts?.email || '')
   const [alertThreshold, setAlertThreshold] = useState(settings.alerts?.threshold || 10)
@@ -34,165 +49,90 @@ export default function TrackingSettings({ brand, userId, onSave }) {
       await updateBrand(brand.id, {
         settings: {
           ...settings,
-          frequency,
-          scheduledTime,
-          timezone,
-          alerts: {
-            enabled: alertsEnabled,
-            email: alertEmail,
-            threshold: alertThreshold
-          },
-          digest: {
-            enabled: digestEnabled,
-            frequency: digestFrequency,
-            email: alertEmail
-          }
+          alerts: { enabled: alertsEnabled, email: alertEmail, threshold: alertThreshold },
+          digest: { enabled: digestEnabled, frequency: digestFrequency, email: alertEmail }
         }
       })
       setSuccess(true)
       onSave?.()
       setTimeout(() => setSuccess(false), 3000)
     } catch (err) {
-      console.error('Failed to save settings:', err)
+      console.error('Failed to save:', err)
     } finally {
       setSaving(false)
     }
   }
-  
-  // Calculate next run time
-  const getNextRunTime = () => {
-    const now = new Date()
-    const [hours, minutes] = scheduledTime.split(':').map(Number)
-    const next = new Date(now)
-    next.setHours(hours, minutes, 0, 0)
-    
-    if (next <= now) {
-      if (frequency === 'daily') next.setDate(next.getDate() + 1)
-      else if (frequency === 'weekly') next.setDate(next.getDate() + 7)
-      else next.setMonth(next.getMonth() + 1)
-    }
-    
-    return next.toLocaleString()
-  }
 
   if (!brand) {
     return (
-      <div className="p-8 text-center">
-        <p className="text-white/60">Select a brand to configure tracking settings.</p>
-      </div>
+      <Card className="flex items-center justify-center h-64 max-w-2xl mx-auto">
+        <p className="text-white/40 text-[14px]">Select a brand to configure settings.</p>
+      </Card>
     )
   }
 
   return (
-    <div className="space-y-8">
+    <div className="max-w-2xl mx-auto py-8 space-y-8">
+      {/* Header */}
       <div>
-        <h2 className="text-2xl font-bold mb-2">Tracking Settings</h2>
-        <p className="text-white/60">Configure automated tracking and alerts for {brand.name}</p>
+        <h1 className="text-xl font-semibold tracking-tight mb-1">Settings</h1>
+        <p className="text-[14px] text-white/40">Configure tracking settings for {brand.name}</p>
       </div>
 
-      {/* Scheduling Section */}
-      <div className="bg-white/5 rounded-xl p-6 border border-white/10">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-lg bg-primary-500/20 flex items-center justify-center text-xl">⏰</div>
-          <div>
-            <h3 className="font-semibold">Automated Scheduling</h3>
-            <p className="text-sm text-white/50">Set how often to run AI tracking</p>
-          </div>
-        </div>
-
-        <div className="grid md:grid-cols-3 gap-4 mb-6">
-          {FREQUENCIES.map(f => (
-            <button
-              key={f.id}
-              onClick={() => setFrequency(f.id)}
-              className={`p-4 rounded-xl text-left transition border ${
-                frequency === f.id 
-                  ? 'bg-primary-500/20 border-primary-500/50' 
-                  : 'bg-white/5 border-white/10 hover:border-white/20'
-              }`}
-            >
-              <div className="font-semibold mb-1">{f.label}</div>
-              <div className="text-sm text-white/50">{f.desc}</div>
-            </button>
-          ))}
-        </div>
-
-        <div className="grid md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm text-white/60 mb-2">Run Time</label>
-            <input
-              type="time"
-              value={scheduledTime}
-              onChange={(e) => setScheduledTime(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 focus:outline-none focus:border-primary-500/50"
-            />
-          </div>
-          <div>
-            <label className="block text-sm text-white/60 mb-2">Timezone</label>
-            <select
-              value={timezone}
-              onChange={(e) => setTimezone(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 focus:outline-none focus:border-primary-500/50"
-            >
-              <option value="America/New_York">Eastern Time (ET)</option>
-              <option value="America/Chicago">Central Time (CT)</option>
-              <option value="America/Denver">Mountain Time (MT)</option>
-              <option value="America/Los_Angeles">Pacific Time (PT)</option>
-              <option value="Europe/London">London (GMT)</option>
-              <option value="Europe/Paris">Paris (CET)</option>
-              <option value="Asia/Tokyo">Tokyo (JST)</option>
-              <option value="Asia/Kolkata">India (IST)</option>
-              <option value="Australia/Sydney">Sydney (AEST)</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="mt-4 p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-lg">
-          <div className="flex items-center gap-2 text-emerald-400">
-            <span>✓</span>
-            <span className="font-medium">Next scheduled run: {getNextRunTime()}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Alerts Section */}
-      <div className="bg-white/5 rounded-xl p-6 border border-white/10">
-        <div className="flex items-center justify-between mb-6">
+      {/* Automated Schedule - Coming Soon */}
+      <Card className="p-6">
+        <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-amber-500/20 flex items-center justify-center text-xl">🔔</div>
+            <div className="w-10 h-10 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center text-white/30">
+              {Icons.clock}
+            </div>
             <div>
-              <h3 className="font-semibold">Real-Time Alerts</h3>
-              <p className="text-sm text-white/50">Get notified when visibility drops</p>
+              <h2 className="text-[14px] font-medium text-white">Automated Schedule</h2>
+              <p className="text-[12px] text-white/40">Run tests automatically on a schedule</p>
             </div>
           </div>
-          <button
-            onClick={() => setAlertsEnabled(!alertsEnabled)}
-            className={`w-14 h-8 rounded-full transition relative ${
-              alertsEnabled ? 'bg-primary-500' : 'bg-white/20'
-            }`}
-          >
-            <div className={`w-6 h-6 rounded-full bg-white absolute top-1 transition-all ${
-              alertsEnabled ? 'right-1' : 'left-1'
-            }`} />
-          </button>
+          <span className="px-3 py-1 rounded-full text-[11px] font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
+            Coming Soon
+          </span>
         </div>
+        <div className="p-4 rounded-xl bg-white/[0.02] border border-dashed border-white/[0.08]">
+          <p className="text-[13px] text-white/30 text-center">
+            Automated scheduling will let you run tests daily, weekly, or monthly without manual intervention.
+          </p>
+        </div>
+      </Card>
 
-        {alertsEnabled && (
-          <div className="space-y-4">
+      {/* Alerts */}
+      <Card className="p-6">
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center text-white/30">
+              {Icons.bell}
+            </div>
             <div>
-              <label className="block text-sm text-white/60 mb-2">Alert Email</label>
+              <h2 className="text-[14px] font-medium text-white">Visibility Alerts</h2>
+              <p className="text-[12px] text-white/40">Get notified when visibility drops</p>
+            </div>
+          </div>
+          <Toggle checked={alertsEnabled} onChange={setAlertsEnabled} />
+        </div>
+        
+        {alertsEnabled && (
+          <div className="space-y-4 pt-4 border-t border-white/[0.06]">
+            <div>
+              <label className="block text-[13px] text-white/50 mb-2">Email address</label>
               <input
                 type="email"
                 value={alertEmail}
                 onChange={(e) => setAlertEmail(e.target.value)}
-                placeholder="your@email.com"
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 focus:outline-none focus:border-primary-500/50"
+                placeholder="alerts@example.com"
+                className="w-full px-4 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.08] text-white text-[14px] placeholder-white/30 focus:outline-none focus:border-amber-500/50"
               />
             </div>
-            
+
             <div>
-              <label className="block text-sm text-white/60 mb-2">
-                Alert when visibility drops by: <span className="text-primary-400 font-bold">{alertThreshold}%</span> or more
+              <label className="block text-[13px] text-white/50 mb-2">
+                Alert when visibility drops by: <span className="text-amber-400 font-medium">{alertThreshold}%</span>
               </label>
               <input
                 type="range"
@@ -201,98 +141,69 @@ export default function TrackingSettings({ brand, userId, onSave }) {
                 step="5"
                 value={alertThreshold}
                 onChange={(e) => setAlertThreshold(Number(e.target.value))}
-                className="w-full"
+                className="w-full accent-amber-500"
               />
-              <div className="flex justify-between text-xs text-white/40 mt-1">
+              <div className="flex justify-between text-[11px] text-white/30 mt-1">
                 <span>5%</span>
-                <span>25%</span>
                 <span>50%</span>
               </div>
             </div>
           </div>
         )}
-      </div>
+      </Card>
 
-      {/* Weekly Digest Section */}
-      <div className="bg-white/5 rounded-xl p-6 border border-white/10">
-        <div className="flex items-center justify-between mb-6">
+      {/* Email Reports */}
+      <Card className="p-6">
+        <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center text-xl">📧</div>
+            <div className="w-10 h-10 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center text-white/30">
+              {Icons.mail}
+            </div>
             <div>
-              <h3 className="font-semibold">Email Reports</h3>
-              <p className="text-sm text-white/50">Receive regular summary reports</p>
+              <h2 className="text-[14px] font-medium text-white">Email Reports</h2>
+              <p className="text-[12px] text-white/40">Receive periodic visibility digests</p>
             </div>
           </div>
-          <button
-            onClick={() => setDigestEnabled(!digestEnabled)}
-            className={`w-14 h-8 rounded-full transition relative ${
-              digestEnabled ? 'bg-primary-500' : 'bg-white/20'
-            }`}
-          >
-            <div className={`w-6 h-6 rounded-full bg-white absolute top-1 transition-all ${
-              digestEnabled ? 'right-1' : 'left-1'
-            }`} />
-          </button>
+          <Toggle checked={digestEnabled} onChange={setDigestEnabled} />
         </div>
-
+        
         {digestEnabled && (
-          <div className="flex gap-3">
-            {['daily', 'weekly', 'monthly'].map(freq => (
-              <button
-                key={freq}
-                onClick={() => setDigestFrequency(freq)}
-                className={`px-4 py-2 rounded-lg capitalize transition ${
-                  digestFrequency === freq
-                    ? 'bg-primary-500/20 border-primary-500/50 text-primary-400'
-                    : 'bg-white/5 border-white/10 text-white/60'
-                } border`}
-              >
-                {freq}
-              </button>
-            ))}
+          <div className="pt-4 border-t border-white/[0.06]">
+            <label className="block text-[13px] text-white/50 mb-3">Report frequency</label>
+            <div className="flex gap-2">
+              {['daily', 'weekly', 'monthly'].map(f => (
+                <button
+                  key={f}
+                  onClick={() => setDigestFrequency(f)}
+                  className={`px-4 py-2 rounded-xl text-[13px] capitalize transition-all ${
+                    digestFrequency === f 
+                      ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30' 
+                      : 'bg-white/[0.03] text-white/50 border border-white/[0.06] hover:border-white/10'
+                  }`}
+                >
+                  {f}
+                </button>
+              ))}
+            </div>
           </div>
         )}
-      </div>
+      </Card>
 
-      {/* Save Button */}
-      <div className="flex items-center justify-between">
-        <div>
-          {success && (
-            <span className="text-emerald-400 flex items-center gap-2">
-              <span>✓</span> Settings saved successfully
-            </span>
-          )}
-        </div>
+      {/* Save */}
+      <div className="flex items-center justify-end gap-3 pt-4">
+        {success && (
+          <span className="flex items-center gap-2 text-[13px] text-emerald-400">
+            {Icons.check}
+            Settings saved
+          </span>
+        )}
         <button
           onClick={handleSave}
           disabled={saving}
-          className="px-8 py-3 bg-gradient-to-r from-primary-500 to-purple-500 rounded-xl font-semibold hover:from-primary-600 hover:to-purple-600 transition disabled:opacity-50"
+          className="px-6 py-2.5 rounded-xl text-[14px] font-medium bg-gradient-to-r from-amber-400 to-orange-500 text-black hover:brightness-110 disabled:opacity-50 transition"
         >
-          {saving ? 'Saving...' : 'Save Settings'}
+          {saving ? 'Saving...' : 'Save Changes'}
         </button>
-      </div>
-
-      {/* Info Box */}
-      <div className="bg-gradient-to-r from-primary-500/10 to-purple-500/10 rounded-xl p-6 border border-primary-500/20">
-        <h4 className="font-semibold mb-3">💡 How Scheduled Tracking Works</h4>
-        <ul className="space-y-2 text-sm text-white/70">
-          <li className="flex items-start gap-2">
-            <span className="text-primary-400">1.</span>
-            <span>Your configured prompts run automatically against selected AI engines</span>
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="text-primary-400">2.</span>
-            <span>Results are saved and compared to previous runs</span>
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="text-primary-400">3.</span>
-            <span>If visibility drops below threshold, you get an instant alert</span>
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="text-primary-400">4.</span>
-            <span>Weekly/daily digests summarize your AI visibility performance</span>
-          </li>
-        </ul>
       </div>
     </div>
   )

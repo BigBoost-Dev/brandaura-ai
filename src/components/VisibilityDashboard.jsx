@@ -8,6 +8,16 @@ const Icons = {
   link: <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" strokeLinecap="round" strokeLinejoin="round"/></svg>,
 }
 
+function CustomTooltip({ active, payload, label }) {
+  if (!active || !payload?.length) return null
+  return (
+    <div className="px-3 py-2 rounded-lg bg-[#1a1a1f] border border-white/[0.1] shadow-xl">
+      <div className="text-[11px] text-white/40 mb-1">{label}</div>
+      <div className="text-[14px] font-semibold text-amber-400">{payload[0].value}%</div>
+    </div>
+  )
+}
+
 function Card({ children, className = '' }) {
   return <div className={`rounded-2xl bg-white/[0.02] border border-white/[0.06] p-6 ${className}`}>{children}</div>
 }
@@ -115,7 +125,7 @@ export default function VisibilityDashboard({ results = [], brand, competitors =
               </defs>
               <XAxis dataKey="date" stroke="rgba(255,255,255,0.06)" tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 11 }} tickFormatter={v => v.slice(5)} />
               <YAxis domain={[0, 100]} stroke="rgba(255,255,255,0.06)" tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 11 }} />
-              <Tooltip contentStyle={{ background: 'rgba(9,9,11,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }} />
+              <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'rgba(255,255,255,0.1)' }} />
               <Area type="monotone" dataKey="score" stroke="#f59e0b" fill="url(#visGrad)" strokeWidth={2} dot={false} />
             </AreaChart>
           </ResponsiveContainer>
