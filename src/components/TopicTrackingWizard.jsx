@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { AI_SEARCH_ENGINES } from '../lib/constants'
 import { useBrandsStore } from '../hooks/useStore'
-import { queryAI } from '../lib/api'
+import { queryAI, getAuthSession } from '../lib/api'
 
 const Icons = {
   x: <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
@@ -93,8 +93,10 @@ export default function TopicTrackingWizard({ userId, onComplete, onCancel, edit
     setGenerating(true)
     
     try {
+      const session = await getAuthSession()
       const result = await queryAI('openai/gpt-4o-mini', 
         `List 5 competitors for ${website} in ${industry}. JSON only: [{"name":"Company Name"}]`,
+        session,
         10000 // 10 second timeout
       )
       
@@ -131,10 +133,12 @@ export default function TopicTrackingWizard({ userId, onComplete, onCancel, edit
     const compNames = competitors.map(c => c.name).slice(0, 3)
     
     try {
+      const session = await getAuthSession()
       const result = await queryAI('openai/gpt-4o-mini',
         `Generate 20 search prompts for "${brand}" (${industry}). Topics: ${selectedTopicNames.map(t => t.name).join(', ')}. Competitors: ${compNames.join(', ') || 'none'}.
 Mix: branded (about ${brand}), unbranded (general), comparison (${brand} vs competitors).
 JSON only: [{"text":"prompt","type":"branded|unbranded|comparison","topic":"topic"}]`,
+        session,
         10000 // 10 second timeout
       )
       

@@ -3,62 +3,31 @@ import { MENTION_TYPES } from './constants'
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
 
-// Cache session to avoid repeated getSession calls
-let cachedSession = null
-let sessionExpiry = 0
-
-async function getSession() {
-  const now = Date.now()
-  // Use cached session if still valid (cache for 10 minutes)
-  if (cachedSession && sessionExpiry > now) {
-    console.log('[getSession] Using cached session')
-    return cachedSession
-  }
-  
-  console.log('[getSession] Fetching fresh session...')
-  
-  // Timeout the getSession call itself - it hangs sometimes
+/**
+ * Get auth session - call this ONCE before starting tracking
+ */
+export async function getAuthSession() {
   try {
-    const sessionPromise = supabase.auth.getSession()
-    const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('SESSION_TIMEOUT')), 5000)
-    )
-    
-    const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise])
-    console.log('[getSession] Got session:', !!session)
-    
-    if (session) {
-      cachedSession = session
-      sessionExpiry = now + 10 * 60 * 1000 // 10 minutes
-    }
+    const { data: { session } } = await supabase.auth.getSession()
     return session
   } catch (err) {
-    console.log('[getSession] Error/timeout:', err.message)
-    // Return cached session even if expired, better than nothing
-    if (cachedSession) {
-      console.log('[getSession] Using expired cache as fallback')
-      return cachedSession
-    }
+    console.error('[getAuthSession] Error:', err)
     return null
   }
 }
 
 /**
  * Query AI through the secure backend proxy
- * NEVER call OpenRouter directly from frontend
+ * Pass session from getAuthSession() - don't fetch it every time
  */
-export async function queryAI(model, query, timeoutMs = 45000) {
+export async function queryAI(model, query, session, timeoutMs = 45000) {
   console.log(`[queryAI] Starting: ${model}`)
   
-  try {
-    // Get session (uses cache if available)
-    const session = await getSession()
-    
-    if (!session) {
-      return { success: false, error: 'Not authenticated' }
-    }
+  if (!session?.access_token) {
+    return { success: false, error: 'Not authenticated' }
+  }
 
-    // Call our secure Edge Function with timeout using Promise.race
+  try {
     console.log(`[queryAI] Fetching...`)
     
     const fetchPromise = fetch(`${SUPABASE_URL}/functions/v1/query-ai`, {
