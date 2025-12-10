@@ -8,12 +8,18 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
  * NEVER call OpenRouter directly from frontend
  */
 export async function queryAI(model, query, timeoutMs = 45000) {
+  console.log(`[queryAI] Starting: ${model}`)
   const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
+  const timeoutId = setTimeout(() => {
+    console.log(`[queryAI] TIMEOUT after ${timeoutMs}ms`)
+    controller.abort()
+  }, timeoutMs)
   
   try {
     // Get current session
+    console.log(`[queryAI] Getting session...`)
     const { data: { session } } = await supabase.auth.getSession()
+    console.log(`[queryAI] Got session: ${!!session}`)
     
     if (!session) {
       clearTimeout(timeoutId)
@@ -21,6 +27,7 @@ export async function queryAI(model, query, timeoutMs = 45000) {
     }
 
     // Call our secure Edge Function (API key is stored server-side)
+    console.log(`[queryAI] Fetching...`)
     const response = await fetch(`${SUPABASE_URL}/functions/v1/query-ai`, {
       method: 'POST',
       headers: {
@@ -32,6 +39,7 @@ export async function queryAI(model, query, timeoutMs = 45000) {
     })
 
     clearTimeout(timeoutId)
+    console.log(`[queryAI] Response: ${response.status}`)
 
     if (!response.ok) {
       const error = await response.json()
@@ -39,6 +47,7 @@ export async function queryAI(model, query, timeoutMs = 45000) {
     }
 
     const data = await response.json()
+    console.log(`[queryAI] Success, length: ${data.choices?.[0]?.message?.content?.length || 0}`)
     
     return {
       success: true,
@@ -49,8 +58,10 @@ export async function queryAI(model, query, timeoutMs = 45000) {
   } catch (error) {
     clearTimeout(timeoutId)
     if (error.name === 'AbortError') {
+      console.log(`[queryAI] Aborted/timed out`)
       return { success: false, error: 'Request timed out' }
     }
+    console.log(`[queryAI] Error: ${error.message}`)
     return { success: false, error: error.message }
   }
 }

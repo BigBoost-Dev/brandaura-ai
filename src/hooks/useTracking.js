@@ -63,6 +63,8 @@ export function useTracking() {
           continue
         }
 
+        console.log(`[Loop] ${queryIndex}/${totalQueries} - ${engine.name}`)
+
         setProgress({
           current: queryIndex,
           total: totalQueries,
@@ -72,7 +74,9 @@ export function useTracking() {
         })
 
         try {
+          console.log(`[Loop] Calling queryAI...`)
           const { success, response, cost, error } = await queryAI(engine.model, prompt.text, 45000)
+          console.log(`[Loop] queryAI returned: success=${success}`)
 
           if (abortRef.current?.signal.aborted) break
 
@@ -144,7 +148,9 @@ export function useTracking() {
 
         // Delay between queries
         if (!abortRef.current?.signal.aborted) {
+          console.log(`[Loop] Waiting 2s...`)
           await new Promise(r => setTimeout(r, 2000))
+          console.log(`[Loop] Continuing...`)
         }
       }
     }
