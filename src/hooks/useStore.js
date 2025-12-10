@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { supabase, db } from '../lib/supabase'
+import { supabase, auth, db } from '../lib/supabase'
 
 // Auth Store
 export const useAuthStore = create(
@@ -16,93 +16,39 @@ export const useAuthStore = create(
         try {
           set({ loading: true, error: null })
           
-          // Check if this is an OAuth callback (has hash with access_token)
-          const isOAuthCallback = window.location.hash && window.location.hash.includes('access_token')
-          
-          if (isOAuthCallback) {
-            // For OAuth callback, wait for onAuthStateChange to handle it
-            // Supabase will automatically process the hash
-            return new Promise((resolve) => {
-              const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-                console.log('Auth event:', event)
-                
-                if (session?.user) {
-                  let profile = null
-                  try {
-                    profile = await db.profiles.get(session.user.id)
-                  } catch (e) {
-                    console.warn('Profile fetch failed:', e)
-                  }
-                  set({ user: session.user, profile, loading: false })
-                } else if (event === 'SIGNED_OUT') {
-                  set({ user: null, profile: null, loading: false })
-                }
-                resolve()
-              })
-            })
-          }
-          
-          // Normal initialization - get existing session
-          const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-          
-          if (sessionError) {
-            console.error('Session error:', sessionError)
-            set({ user: null, profile: null, loading: false })
-            return
-          }
+          // Check for existing session
+          const session = await auth.getSession()
           
           if (session?.user) {
-            let profile = null
-            try {
-              profile = await db.profiles.get(session.user.id)
-            } catch (e) {
-              console.warn('Profile fetch failed:', e)
-            }
+            const profile = await db.profiles.get(session.user.id)
             set({ user: session.user, profile, loading: false })
           } else {
             set({ user: null, profile: null, loading: false })
           }
           
-          // Listen for future auth changes
-          supabase.auth.onAuthStateChange(async (event, session) => {
-            console.log('Auth event:', event)
-            
-            if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-              if (session?.user) {
-                let profile = null
-                try {
-                  profile = await db.profiles.get(session.user.id)
-                } catch (e) {
-                  console.warn('Profile fetch failed:', e)
-                }
-                set({ user: session.user, profile, loading: false })
-              }
+          // Listen for auth changes
+          auth.onAuthStateChange(async (event, session) => {
+            if (event === 'SIGNED_IN' && session?.user) {
+              const profile = await db.profiles.get(session.user.id)
+              set({ user: session.user, profile })
             } else if (event === 'SIGNED_OUT') {
-              set({ user: null, profile: null, loading: false })
+              set({ user: null, profile: null })
             }
           })
         } catch (error) {
           console.error('Auth init error:', error)
-          set({ error: error.message, loading: false, user: null, profile: null })
+          set({ error: error.message, loading: false })
         }
       },
 
       // Sign in with Google
       signInWithGoogle: async () => {
         try {
-          set({ error: null })
-          const { data, error } = await supabase.auth.signInWithOAuth({
-            provider: 'google',
-            options: {
-              redirectTo: `${window.location.origin}/dashboard`
-            }
-          })
-          if (error) throw error
-          return { error: null }
+          set({ loading: true, error: null })
+          await auth.signInWithGoogle()
         } catch (error) {
-          console.error('Google sign in error:', error)
-          set({ error: error.message })
-          return { error }
+          set({ error: error.message, loading: false })
+          throw error
         }
       },
 
@@ -110,24 +56,13 @@ export const useAuthStore = create(
       signIn: async (email, password) => {
         try {
           set({ loading: true, error: null })
-          const { data, error } = await supabase.auth.signInWithPassword({
-            email,
-            password
-          })
-          if (error) throw error
-          
-          let profile = null
-          try {
-            profile = await db.profiles.get(data.user.id)
-          } catch (e) {
-            console.warn('Profile fetch failed:', e)
-          }
-          set({ user: data.user, profile, loading: false })
-          return { user: data.user, error: null }
+          const { user } = await auth.signIn(email, password)
+          const profile = await db.profiles.get(user.id)
+          set({ user, profile, loading: false })
+          return user
         } catch (error) {
-          console.error('Sign in error:', error)
           set({ error: error.message, loading: false })
-          return { error }
+          throw error
         }
       },
 
@@ -135,18 +70,12 @@ export const useAuthStore = create(
       signUp: async (email, password, metadata = {}) => {
         try {
           set({ loading: true, error: null })
-          const { data, error } = await supabase.auth.signUp({
-            email,
-            password,
-            options: { data: metadata }
-          })
-          if (error) throw error
-          set({ user: data.user, loading: false })
-          return { user: data.user, error: null }
+          const { user } = await auth.signUp(email, password, metadata)
+          set({ user, loading: false })
+          return user
         } catch (error) {
-          console.error('Sign up error:', error)
           set({ error: error.message, loading: false })
-          return { error }
+          throw error
         }
       },
 
@@ -154,11 +83,9 @@ export const useAuthStore = create(
       signOut: async () => {
         try {
           set({ loading: true })
-          const { error } = await supabase.auth.signOut()
-          if (error) throw error
+          await auth.signOut()
           set({ user: null, profile: null, loading: false })
         } catch (error) {
-          console.error('Sign out error:', error)
           set({ error: error.message, loading: false })
           throw error
         }
@@ -223,9 +150,12 @@ export const useBrandsStore = create(
 
       // Add brand
       addBrand: async (brand) => {
+        console.log('Store addBrand called:', brand)
         try {
           set({ loading: true, error: null })
+          console.log('Calling db.brands.create...')
           const newBrand = await db.brands.create(brand)
+          console.log('db.brands.create returned:', newBrand)
           set(state => ({ 
             brands: [...state.brands, newBrand],
             activeBrandId: newBrand.id,
@@ -233,6 +163,7 @@ export const useBrandsStore = create(
           }))
           return newBrand
         } catch (error) {
+          console.error('Store addBrand error:', error)
           set({ error: error.message, loading: false })
           throw error
         }

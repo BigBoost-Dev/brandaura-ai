@@ -129,11 +129,13 @@ export const db = {
     },
 
     async create(brand) {
+      console.log('Supabase insert:', brand)
       const { data, error } = await supabase
         .from('brands')
         .insert(brand)
         .select()
         .single()
+      console.log('Supabase result:', { data, error })
       if (error) throw error
       return data
     },
