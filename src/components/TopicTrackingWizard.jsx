@@ -262,6 +262,8 @@ JSON only: [{"text":"prompt","type":"branded|unbranded|comparison","topic":"topi
     setLoading(true)
     setError('')
     
+    console.log('=== Starting brand save ===')
+    
     try {
       const sanitize = (str) => String(str || '').trim().slice(0, 500)
       
@@ -293,24 +295,25 @@ JSON only: [{"text":"prompt","type":"branded|unbranded|comparison","topic":"topi
         settings
       }
       
-      // 10 second timeout
-      const timeout = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Save timed out. Please try again.')), 10000)
-      )
+      console.log('Brand data:', JSON.stringify(brandData, null, 2))
+      console.log('userId:', userId)
       
       if (isEditMode && editBrand?.id) {
-        await Promise.race([updateBrand(editBrand.id, brandData), timeout])
+        console.log('Updating brand:', editBrand.id)
+        const result = await updateBrand(editBrand.id, brandData)
+        console.log('Update result:', result)
       } else {
-        const newBrand = await Promise.race([
-          addBrand({ user_id: userId, ...brandData }), 
-          timeout
-        ])
+        console.log('Creating new brand...')
+        const newBrand = await addBrand({ user_id: userId, ...brandData })
+        console.log('Create result:', newBrand)
         if (newBrand?.id) setActiveBrand(newBrand.id)
       }
       
+      console.log('Save successful!')
       if (userId) await loadBrands(userId)
       if (onComplete) onComplete()
     } catch (e) {
+      console.error('=== Save failed ===', e)
       setError(e?.message || 'Failed to save. Please try again.')
     } finally {
       setLoading(false)
