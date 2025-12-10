@@ -137,24 +137,22 @@ export default function Header({
         )}
 
         {/* Run/Stop Tracking */}
-        {activeBrand && hasTrackingConfig && (
-          isTracking ? (
-            <button
-              onClick={onStopTracking}
-              className="flex items-center gap-2 px-3 py-1.5 text-[13px] text-red-400 bg-red-500/10 hover:bg-red-500/20 rounded-lg transition-colors"
-            >
-              {Icons.stop}
-              <span>Stop</span>
-            </button>
-          ) : (
-            <button
-              onClick={onRunTracking}
-              className="flex items-center gap-2 px-3 py-1.5 text-[13px] text-black font-medium bg-gradient-to-r from-amber-400 to-orange-500 hover:brightness-110 rounded-lg transition"
-            >
-              {Icons.play}
-              <span>Run Tests</span>
-            </button>
-          )
+        {isTracking ? (
+          <button
+            onClick={onStopTracking}
+            className="flex items-center gap-2 px-3 py-1.5 text-[13px] text-red-400 bg-red-500/10 hover:bg-red-500/20 rounded-lg transition-colors"
+          >
+            {Icons.stop}
+            <span>Stop</span>
+          </button>
+        ) : activeBrand && hasTrackingConfig && (
+          <button
+            onClick={onRunTracking}
+            className="flex items-center gap-2 px-3 py-1.5 text-[13px] text-black font-medium bg-gradient-to-r from-amber-400 to-orange-500 hover:brightness-110 rounded-lg transition"
+          >
+            {Icons.play}
+            <span>Run Tests</span>
+          </button>
         )}
 
         {/* User Menu */}
