@@ -9,7 +9,14 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 export const supabase = createClient(
   supabaseUrl || 'https://demo.supabase.co',
-  supabaseAnonKey || 'demo-key'
+  supabaseAnonKey || 'demo-key',
+  {
+    auth: {
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: true
+    }
+  }
 )
 
 // Auth helpers
