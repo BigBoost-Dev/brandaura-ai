@@ -28,34 +28,33 @@ async function getSession() {
  */
 export async function queryAI(model, query, timeoutMs = 45000) {
   console.log(`[queryAI] Starting: ${model}`)
-  const controller = new AbortController()
-  const timeoutId = setTimeout(() => {
-    console.log(`[queryAI] TIMEOUT after ${timeoutMs}ms`)
-    controller.abort()
-  }, timeoutMs)
   
   try {
     // Get session (uses cache if available)
     const session = await getSession()
     
     if (!session) {
-      clearTimeout(timeoutId)
       return { success: false, error: 'Not authenticated' }
     }
 
-    // Call our secure Edge Function (API key is stored server-side)
+    // Call our secure Edge Function with timeout using Promise.race
     console.log(`[queryAI] Fetching...`)
-    const response = await fetch(`${SUPABASE_URL}/functions/v1/query-ai`, {
+    
+    const fetchPromise = fetch(`${SUPABASE_URL}/functions/v1/query-ai`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${session.access_token}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ model, query }),
-      signal: controller.signal
+      body: JSON.stringify({ model, query })
     })
+    
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('TIMEOUT')), timeoutMs)
+    })
+    
+    const response = await Promise.race([fetchPromise, timeoutPromise])
 
-    clearTimeout(timeoutId)
     console.log(`[queryAI] Response: ${response.status}`)
 
     if (!response.ok) {
@@ -73,13 +72,8 @@ export async function queryAI(model, query, timeoutMs = 45000) {
       cost: data.usage ? (data.usage.prompt_tokens * 0.000001 + data.usage.completion_tokens * 0.000002) : 0
     }
   } catch (error) {
-    clearTimeout(timeoutId)
-    if (error.name === 'AbortError') {
-      console.log(`[queryAI] Aborted/timed out`)
-      return { success: false, error: 'Request timed out' }
-    }
     console.log(`[queryAI] Error: ${error.message}`)
-    return { success: false, error: error.message }
+    return { success: false, error: error.message === 'TIMEOUT' ? 'Request timed out' : error.message }
   }
 }
 
