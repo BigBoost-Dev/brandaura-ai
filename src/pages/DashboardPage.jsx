@@ -23,7 +23,7 @@ import TrackingSettings from '../components/TrackingSettings'
 export default function Dashboard() {
   const navigate = useNavigate()
   const { user, profile, loading: authLoading, signOut } = useAuthStore()
-  const { brands, activeBrandId, loadBrands, getActiveBrand, setActiveBrand } = useBrandsStore()
+  const { brands, activeBrandId, loadBrands, getActiveBrand, setActiveBrand, deleteBrand } = useBrandsStore()
   const { loadResults, getResults } = useResultsStore()
   const { activeTab, setActiveTab } = useUIStore()
   const { isRunning: isTracking, progress: trackingProgress, logs: trackingLogs, runTracking, stopTracking } = useTracking()
@@ -89,14 +89,21 @@ export default function Dashboard() {
 
       <Header 
         user={user} 
-        profile={profile} 
         brands={brands} 
-        activeBrandId={activeBrandId}
+        activeBrand={activeBrand}
         onBrandChange={setActiveBrand} 
         onAddBrand={() => setShowTopicWizard(true)} 
-        onSignOut={signOut}
-        onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+        onDeleteBrand={async (brandId) => {
+          if (brands.length <= 1) return
+          try {
+            await deleteBrand(brandId)
+            loadBrands(user.id)
+          } catch (e) {
+            console.error('Failed to delete brand:', e)
+          }
+        }}
         onOpenTopicWizard={() => setShowTopicWizard(true)}
+        onSignOut={signOut}
         isTracking={isTracking}
         trackingProgress={trackingProgress}
         onRunTracking={handleRunTracking}
@@ -113,7 +120,7 @@ export default function Dashboard() {
           onClose={() => setSidebarOpen(false)}
         />
         
-        <main className="flex-1 p-6 lg:p-8 max-w-7xl mx-auto">
+        <main className="flex-1 p-6 lg:p-8 max-w-7xl mx-auto ml-[52px]">
           {activeTab === 'dashboard' && (
             <DashboardView 
               metrics={metrics} 
