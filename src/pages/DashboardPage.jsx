@@ -97,6 +97,13 @@ export default function Dashboard() {
           if (brands.length <= 1) return
           try {
             await deleteBrand(brandId)
+            // Switch to another brand if we deleted the active one
+            if (activeBrandId === brandId) {
+              const remaining = brands.filter(b => b.id !== brandId)
+              if (remaining.length > 0) {
+                setActiveBrand(remaining[0].id)
+              }
+            }
             loadBrands(user.id)
           } catch (e) {
             console.error('Failed to delete brand:', e)

@@ -74,9 +74,10 @@ export default function Header({
                         <button
                           onClick={(e) => { 
                             e.stopPropagation()
-                            if (confirm(`Delete "${brand.name}"?`)) onDeleteBrand(brand.id)
+                            if (confirm(`Delete "${brand.name}"? This cannot be undone.`)) onDeleteBrand(brand.id)
                           }}
-                          className="p-1 text-white/30 hover:text-red-400 transition-colors"
+                          className="p-1.5 ml-2 rounded text-white/40 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                          title="Delete brand"
                         >
                           {Icons.trash}
                         </button>
