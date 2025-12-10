@@ -8,6 +8,19 @@ const Icons = {
   trendDown: <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M13 17h8m0 0v-8m0 8l-8-8-4 4-6-6" strokeLinecap="round" strokeLinejoin="round"/></svg>,
 }
 
+function CustomTooltip({ active, payload }) {
+  if (!active || !payload?.length) return null
+  const data = payload[0].payload
+  return (
+    <div className="px-3 py-2 rounded-lg bg-[#1a1a1f] border border-white/[0.1] shadow-xl">
+      <div className="text-[13px] font-medium text-white mb-1">{data.name}</div>
+      <div className="text-[14px] font-semibold" style={{ color: data.isYou ? '#f59e0b' : '#fff' }}>
+        {data.value}%
+      </div>
+    </div>
+  )
+}
+
 function Card({ children, className = '' }) {
   return <div className={`rounded-2xl bg-white/[0.02] border border-white/[0.06] p-6 ${className}`}>{children}</div>
 }
@@ -126,7 +139,7 @@ export default function CompetitorDashboard({ results = [], brand, competitors =
           <BarChart data={chartData} layout="vertical" margin={{ left: 80 }}>
             <XAxis type="number" domain={[0, 100]} stroke="rgba(255,255,255,0.06)" tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 11 }} />
             <YAxis type="category" dataKey="name" stroke="rgba(255,255,255,0.06)" tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 12 }} width={80} />
-            <Tooltip contentStyle={{ background: 'rgba(9,9,11,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }} />
+            <Tooltip content={<CustomTooltip />} cursor={false} />
             <Bar dataKey="value" radius={[0, 4, 4, 0]}>
               {chartData.map((entry, index) => (
                 <Cell key={index} fill={entry.isYou ? '#f59e0b' : 'rgba(255,255,255,0.15)'} />
