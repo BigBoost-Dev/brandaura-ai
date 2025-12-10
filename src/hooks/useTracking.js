@@ -59,152 +59,152 @@ export function useTracking() {
       addLog(`🚀 Starting tracking for ${brand.name}`, 'info')
       addLog(`📋 ${prompts.length} prompts × ${engines.length} engines = ${totalQueries} queries`, 'info')
 
-    for (const prompt of prompts) {
-      if (abortRef.current?.signal.aborted) break
-
-      for (const engineId of engines) {
+      for (const prompt of prompts) {
         if (abortRef.current?.signal.aborted) break
 
-        queryIndex++
-        const engine = AI_SEARCH_ENGINES[engineId]
-        
-        if (!engine) {
-          addLog(`⚠️ Unknown engine: ${engineId}`, 'warning')
-          continue
-        }
-
-        console.log(`[Loop] ${queryIndex}/${totalQueries} - ${engine.name}`)
-
-        setProgress({
-          current: queryIndex,
-          total: totalQueries,
-          percentage: Math.round((queryIndex / totalQueries) * 100),
-          prompt: prompt.text?.substring(0, 50) + '...',
-          engine: engine.name
-        })
-
-        try {
-          console.log(`[Loop] Calling queryAI...`)
-          const { success, response, cost, error } = await queryAI(engine.model, prompt.text, session, 45000)
-          console.log(`[Loop] queryAI returned: success=${success}`)
-
+        for (const engineId of engines) {
           if (abortRef.current?.signal.aborted) break
 
-          if (success && response) {
-            // Parse competitors if it's a JSON string
-            let parsedCompetitors = brand.competitors || []
-            if (typeof parsedCompetitors === 'string') {
-              try { parsedCompetitors = JSON.parse(parsedCompetitors) } catch {}
-            }
-            parsedCompetitors = parsedCompetitors.map(c => typeof c === 'object' ? c.name : c)
-            
-            const analysis = analyzeResponse(response, brand.name, parsedCompetitors)
-            
-            // Extract sources from response
-            let sources = []
-            try {
-              sources = extractSources(response, analysis.citedUrls || [])
-            } catch (e) {
-              // Ignore source extraction errors
-            }
-            
-            // Find topic info
-            const topic = topics.find(t => t.id === prompt.topicId) || {}
-
-            results.push({
-              brand_id: brand.id,
-              user_id: userId,
-              batch_id: batchId,
-              platform_id: engineId,
-              platform_name: engine.name,
-              model: engine.model,
-              query: prompt.text,
-              query_type: prompt.type || 'general',
-              topic_id: prompt.topicId || null,
-              topic_name: prompt.topicName || topic.name || 'General',
-              response_text: response,
-              brand_mentioned: analysis.brandMention !== 'notMentioned',
-              mention_type: analysis.brandMention,
-              brand_position: analysis.brandPosition,
-              mention_count: analysis.mentionCount,
-              sentiment: analysis.sentiment,
-              confidence_score: analysis.confidence,
-              competitor_mentions: analysis.competitorMentions,
-              cited_urls: analysis.citedUrls,
-              sources: sources,
-              snippet: analysis.snippet,
-              word_count: analysis.wordCount,
-              cost: cost || 0,
-              created_at: new Date().toISOString()
-            })
-
-            const emoji = analysis.brandMention === 'leader' ? '🏆' :
-                         analysis.brandMention === 'recommended' ? '✅' :
-                         analysis.brandMention === 'mentioned' ? '📍' :
-                         analysis.brandMention === 'notMentioned' ? '❌' : '⚠️'
-            
-            addLog(`${emoji} ${engine.name}: ${analysis.brandMention} (${prompt.topicName || 'General'})`, 'info')
-            
-            if (sources.length > 0) {
-              addLog(`   📎 Sources: ${sources.map(s => s.name).join(', ')}`, 'info')
-            }
-          } else {
-            addLog(`❌ ${engine.name}: ${error || 'No response'}`, 'error')
-          }
-        } catch (err) {
-          if (err.name === 'AbortError') break
-          addLog(`❌ ${engine.name}: ${err.message}`, 'error')
-        }
-
-        // Delay between queries (skip on last iteration)
-        if (!abortRef.current?.signal.aborted && queryIndex < totalQueries) {
-          console.log(`[Loop] Waiting 2s...`)
-          await new Promise(r => setTimeout(r, 2000))
-          console.log(`[Loop] Continuing...`)
-        }
-      }
-    }
-
-    // ===== POST-LOOP: Save results =====
-    console.log(`[Loop] EXITED - collected ${results.length} results`)
-    
-    if (results.length > 0) {
-      try {
-        console.log(`[Loop] Saving ${results.length} results to database...`)
-        addLog(`💾 Saving ${results.length} results...`, 'info')
-        
-        // Save in batches of 20 to avoid payload size issues
-        const BATCH_SIZE = 20
-        let savedCount = 0
-        
-        for (let i = 0; i < results.length; i += BATCH_SIZE) {
-          const batch = results.slice(i, i + BATCH_SIZE)
-          console.log(`[Loop] Saving batch ${Math.floor(i/BATCH_SIZE) + 1}/${Math.ceil(results.length/BATCH_SIZE)} (${batch.length} items)`)
+          queryIndex++
+          const engine = AI_SEARCH_ENGINES[engineId]
           
+          if (!engine) {
+            addLog(`⚠️ Unknown engine: ${engineId}`, 'warning')
+            continue
+          }
+
+          console.log(`[Loop] ${queryIndex}/${totalQueries} - ${engine.name}`)
+
+          setProgress({
+            current: queryIndex,
+            total: totalQueries,
+            percentage: Math.round((queryIndex / totalQueries) * 100),
+            prompt: prompt.text?.substring(0, 50) + '...',
+            engine: engine.name
+          })
+
           try {
-            await addResults(brand.id, batch)
-            savedCount += batch.length
-          } catch (batchErr) {
-            console.error(`[Loop] Batch save error:`, batchErr)
-            addLog(`⚠️ Failed to save batch: ${batchErr.message}`, 'warning')
+            console.log(`[Loop] Calling queryAI...`)
+            const { success, response, cost, error } = await queryAI(engine.model, prompt.text, session, 45000)
+            console.log(`[Loop] queryAI returned: success=${success}`)
+
+            if (abortRef.current?.signal.aborted) break
+
+            if (success && response) {
+              // Parse competitors if it's a JSON string
+              let parsedCompetitors = brand.competitors || []
+              if (typeof parsedCompetitors === 'string') {
+                try { parsedCompetitors = JSON.parse(parsedCompetitors) } catch {}
+              }
+              parsedCompetitors = parsedCompetitors.map(c => typeof c === 'object' ? c.name : c)
+              
+              const analysis = analyzeResponse(response, brand.name, parsedCompetitors)
+              
+              // Extract sources from response
+              let sources = []
+              try {
+                sources = extractSources(response, analysis.citedUrls || [])
+              } catch (e) {
+                // Ignore source extraction errors
+              }
+              
+              // Find topic info
+              const topic = topics.find(t => t.id === prompt.topicId) || {}
+
+              results.push({
+                brand_id: brand.id,
+                user_id: userId,
+                batch_id: batchId,
+                platform_id: engineId,
+                platform_name: engine.name,
+                model: engine.model,
+                query: prompt.text,
+                query_type: prompt.type || 'general',
+                topic_id: prompt.topicId || null,
+                topic_name: prompt.topicName || topic.name || 'General',
+                response_text: response,
+                brand_mentioned: analysis.brandMention !== 'notMentioned',
+                mention_type: analysis.brandMention,
+                brand_position: analysis.brandPosition,
+                mention_count: analysis.mentionCount,
+                sentiment: analysis.sentiment,
+                confidence_score: analysis.confidence,
+                competitor_mentions: analysis.competitorMentions,
+                cited_urls: analysis.citedUrls,
+                sources: sources,
+                snippet: analysis.snippet,
+                word_count: analysis.wordCount,
+                cost: cost || 0,
+                created_at: new Date().toISOString()
+              })
+
+              const emoji = analysis.brandMention === 'leader' ? '🏆' :
+                           analysis.brandMention === 'recommended' ? '✅' :
+                           analysis.brandMention === 'mentioned' ? '📍' :
+                           analysis.brandMention === 'notMentioned' ? '❌' : '⚠️'
+              
+              addLog(`${emoji} ${engine.name}: ${analysis.brandMention} (${prompt.topicName || 'General'})`, 'info')
+              
+              if (sources.length > 0) {
+                addLog(`   📎 Sources: ${sources.map(s => s.name).join(', ')}`, 'info')
+              }
+            } else {
+              addLog(`❌ ${engine.name}: ${error || 'No response'}`, 'error')
+            }
+          } catch (err) {
+            if (err.name === 'AbortError') break
+            addLog(`❌ ${engine.name}: ${err.message}`, 'error')
+          }
+
+          // Delay between queries (skip on last iteration)
+          if (!abortRef.current?.signal.aborted && queryIndex < totalQueries) {
+            console.log(`[Loop] Waiting 2s...`)
+            await new Promise(r => setTimeout(r, 2000))
+            console.log(`[Loop] Continuing...`)
           }
         }
-        
-        console.log(`[Loop] Saved ${savedCount}/${results.length} results`)
-        addLog(`✅ Saved ${savedCount} results to database`, 'success')
-      } catch (err) {
-        console.error(`[Loop] Save error:`, err)
-        addLog(`❌ Failed to save results: ${err.message}`, 'error')
       }
-    } else {
-      console.log(`[Loop] No results to save`)
-      addLog(`⚠️ No successful responses to save`, 'warning')
-    }
 
-    console.log(`[Loop] Setting isRunning=false`)
-    setProgress({ current: totalQueries, total: totalQueries, percentage: 100, prompt: 'Complete', engine: '' })
-    addLog('🏁 Tracking complete!', 'success')
-    
+      // ===== POST-LOOP: Save results =====
+      console.log(`[Loop] EXITED - collected ${results.length} results`)
+      
+      if (results.length > 0) {
+        try {
+          console.log(`[Loop] Saving ${results.length} results to database...`)
+          addLog(`💾 Saving ${results.length} results...`, 'info')
+          
+          // Save in batches of 20 to avoid payload size issues
+          const BATCH_SIZE = 20
+          let savedCount = 0
+          
+          for (let i = 0; i < results.length; i += BATCH_SIZE) {
+            const batch = results.slice(i, i + BATCH_SIZE)
+            console.log(`[Loop] Saving batch ${Math.floor(i/BATCH_SIZE) + 1}/${Math.ceil(results.length/BATCH_SIZE)} (${batch.length} items)`)
+            
+            try {
+              await addResults(brand.id, batch)
+              savedCount += batch.length
+            } catch (batchErr) {
+              console.error(`[Loop] Batch save error:`, batchErr)
+              addLog(`⚠️ Failed to save batch: ${batchErr.message}`, 'warning')
+            }
+          }
+          
+          console.log(`[Loop] Saved ${savedCount}/${results.length} results`)
+          addLog(`✅ Saved ${savedCount} results to database`, 'success')
+        } catch (err) {
+          console.error(`[Loop] Save error:`, err)
+          addLog(`❌ Failed to save results: ${err.message}`, 'error')
+        }
+      } else {
+        console.log(`[Loop] No results to save`)
+        addLog(`⚠️ No successful responses to save`, 'warning')
+      }
+
+      console.log(`[Loop] Setting isRunning=false`)
+      setProgress({ current: totalQueries, total: totalQueries, percentage: 100, prompt: 'Complete', engine: '' })
+      addLog('🏁 Tracking complete!', 'success')
+      
     } catch (fatalError) {
       // Catch any unexpected errors that might crash the tracking
       console.error(`[Loop] FATAL ERROR:`, fatalError)
