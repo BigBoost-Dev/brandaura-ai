@@ -10,14 +10,23 @@ let sessionExpiry = 0
 async function getSession() {
   const now = Date.now()
   if (cachedSession && sessionExpiry > now) {
+    console.log('[getSession] Using cached session')
     return cachedSession
   }
-  const { data: { session } } = await supabase.auth.getSession()
-  if (session) {
-    cachedSession = session
-    sessionExpiry = now + 5 * 60 * 1000 // Cache for 5 minutes
+  
+  console.log('[getSession] Fetching new session...')
+  try {
+    const { data: { session } } = await supabase.auth.getSession()
+    console.log('[getSession] Got session:', !!session)
+    if (session) {
+      cachedSession = session
+      sessionExpiry = now + 5 * 60 * 1000 // Cache for 5 minutes
+    }
+    return session
+  } catch (err) {
+    console.error('[getSession] Error:', err)
+    return cachedSession // Return cached even if expired
   }
-  return session
 }
 
 /**
@@ -26,60 +35,65 @@ async function getSession() {
 export async function queryAI(model, query, timeoutMs = 30000) {
   console.log(`[queryAI] Starting: ${model}`)
   
-  const timeoutPromise = new Promise((_, reject) => 
-    setTimeout(() => {
-      console.log(`[queryAI] TIMEOUT after ${timeoutMs}ms`)
-      reject(new Error('TIMEOUT'))
-    }, timeoutMs)
-  )
-  
-  const mainPromise = (async () => {
-    try {
-      const session = await getSession()
-      console.log(`[queryAI] Got session`)
-      
-      if (!session) {
-        return { success: false, error: 'Not authenticated' }
-      }
-      
-      console.log(`[queryAI] Fetching...`)
-      const response = await fetch(`${SUPABASE_URL}/functions/v1/query-ai`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ model, query })
-      })
-      
-      console.log(`[queryAI] Response: ${response.status}`)
-
-      if (!response.ok) {
-        const errorText = await response.text()
-        return { success: false, error: errorText || `API error: ${response.status}` }
-      }
-
-      const data = await response.json()
-      console.log(`[queryAI] Success, length: ${data.choices?.[0]?.message?.content?.length || 0}`)
-      
-      return {
-        success: true,
-        response: data.choices?.[0]?.message?.content || '',
-        usage: data.usage,
-        cost: data.usage ? (data.usage.prompt_tokens * 0.000001 + data.usage.completion_tokens * 0.000002) : 0
-      }
-    } catch (err) {
-      console.log(`[queryAI] Error: ${err.message}`)
-      return { success: false, error: err.message }
-    }
-  })()
-  
   try {
-    return await Promise.race([mainPromise, timeoutPromise])
+    // Get session first (with its own timeout)
+    const sessionPromise = getSession()
+    const sessionTimeout = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('SESSION_TIMEOUT')), 5000)
+    )
+    
+    let session
+    try {
+      session = await Promise.race([sessionPromise, sessionTimeout])
+    } catch (e) {
+      console.log('[queryAI] Session timeout, using cached')
+      session = cachedSession
+    }
+    
+    if (!session) {
+      console.log('[queryAI] No session available')
+      return { success: false, error: 'Not authenticated' }
+    }
+    
+    console.log('[queryAI] Fetching...')
+    
+    // Now do the actual API call with timeout
+    const controller = new AbortController()
+    const fetchTimeout = setTimeout(() => controller.abort(), timeoutMs)
+    
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/query-ai`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ model, query }),
+      signal: controller.signal
+    })
+    
+    clearTimeout(fetchTimeout)
+    console.log(`[queryAI] Response: ${response.status}`)
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      return { success: false, error: errorText || `API error: ${response.status}` }
+    }
+
+    const data = await response.json()
+    console.log(`[queryAI] Success, length: ${data.choices?.[0]?.message?.content?.length || 0}`)
+    
+    return {
+      success: true,
+      response: data.choices?.[0]?.message?.content || '',
+      usage: data.usage,
+      cost: data.usage ? (data.usage.prompt_tokens * 0.000001 + data.usage.completion_tokens * 0.000002) : 0
+    }
   } catch (error) {
-    if (error.message === 'TIMEOUT') {
+    if (error.name === 'AbortError') {
+      console.log(`[queryAI] Fetch aborted/timed out`)
       return { success: false, error: `Timed out (${timeoutMs/1000}s)` }
     }
+    console.error('[queryAI] Error:', error.message)
     return { success: false, error: error.message }
   }
 }
