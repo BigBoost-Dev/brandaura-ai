@@ -217,11 +217,20 @@ export const useResultsStore = create((set, get) => ({
     try {
       set({ loading: true, error: null })
       const results = await db.results.list(brandId, options)
+      
+      // Ensure array fields are always arrays (DB might return null)
+      const sanitizedResults = (results || []).map(r => ({
+        ...r,
+        sources: Array.isArray(r.sources) ? r.sources : [],
+        cited_urls: Array.isArray(r.cited_urls) ? r.cited_urls : [],
+        competitor_mentions: r.competitor_mentions || {}
+      }))
+      
       set(state => ({
-        results: { ...state.results, [brandId]: results },
+        results: { ...state.results, [brandId]: sanitizedResults },
         loading: false
       }))
-      return results
+      return sanitizedResults
     } catch (error) {
       set({ error: error.message, loading: false })
       throw error
@@ -231,15 +240,32 @@ export const useResultsStore = create((set, get) => ({
   // Add results
   addResults: async (brandId, newResults) => {
     try {
+      console.log(`[Store] addResults called with ${newResults.length} results for brand ${brandId}`)
+      console.log(`[Store] First result keys:`, Object.keys(newResults[0] || {}))
+      
       const saved = await db.results.create(newResults)
+      console.log(`[Store] db.results.create returned ${saved?.length || 0} saved results`)
+      
+      // Ensure array fields are always arrays (DB might return null)
+      const sanitizedResults = (saved || []).map(r => ({
+        ...r,
+        sources: Array.isArray(r.sources) ? r.sources : [],
+        cited_urls: Array.isArray(r.cited_urls) ? r.cited_urls : [],
+        competitor_mentions: r.competitor_mentions || {}
+      }))
+      
       set(state => ({
         results: {
           ...state.results,
-          [brandId]: [...(state.results[brandId] || []), ...saved]
+          [brandId]: [...(state.results[brandId] || []), ...sanitizedResults]
         }
       }))
-      return saved
+      return sanitizedResults
     } catch (error) {
+      console.error(`[Store] addResults error:`, error)
+      console.error(`[Store] Error message:`, error.message)
+      console.error(`[Store] Error code:`, error.code)
+      console.error(`[Store] Error details:`, error.details)
       set({ error: error.message })
       throw error
     }
