@@ -28,10 +28,19 @@ function Card({ children, className = '' }) {
 export default function CompetitorDashboard({ results = [], brand, competitors = [], timeRange = '30d' }) {
   const [selectedMetric, setSelectedMetric] = useState('visibility')
 
+  // Ensure competitors is always an array
+  const safeCompetitors = useMemo(() => {
+    if (Array.isArray(competitors)) return competitors
+    if (typeof competitors === 'string') {
+      try { return JSON.parse(competitors) } catch { return [] }
+    }
+    return []
+  }, [competitors])
+
   const competitorMetrics = useMemo(() => {
-    if (results.length === 0 || competitors.length === 0) return null
+    if (results.length === 0 || safeCompetitors.length === 0) return null
     
-    const allBrands = [brand?.name, ...competitors.map(c => c.name || c)].filter(Boolean)
+    const allBrands = [brand?.name, ...safeCompetitors.map(c => c.name || c)].filter(Boolean)
     const scores = {}
     
     allBrands.forEach(name => {

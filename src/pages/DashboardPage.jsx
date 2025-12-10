@@ -218,7 +218,13 @@ export default function Dashboard() {
             <CompetitorDashboard 
               results={brandResults}
               brand={activeBrand}
-              competitors={activeBrand?.competitors || []}
+              competitors={(() => {
+                let comps = activeBrand?.competitors || []
+                if (typeof comps === 'string') {
+                  try { comps = JSON.parse(comps) } catch { comps = [] }
+                }
+                return Array.isArray(comps) ? comps : []
+              })()}
               timeRange="30d"
             />
           )}
@@ -690,19 +696,19 @@ function ResultsView({ results }) {
                     {result.response || result.raw_response || 'No response content available'}
                   </p>
                 </div>
-                {result.sources && result.sources.length > 0 && (
+                {Array.isArray(result.sources) && result.sources.length > 0 && (
                   <div className="mt-3">
                     <span className="text-[11px] text-white/30 uppercase tracking-wide">Sources Cited</span>
                     <div className="flex flex-wrap gap-2 mt-2">
                       {result.sources.map((src, j) => (
                         <a 
                           key={j} 
-                          href={src} 
+                          href={typeof src === 'string' ? src : src.url || '#'} 
                           target="_blank" 
                           rel="noopener noreferrer"
                           className="text-[12px] text-amber-400/70 hover:text-amber-400 truncate max-w-[200px]"
                         >
-                          {src}
+                          {typeof src === 'string' ? src : src.name || src.url || 'Source'}
                         </a>
                       ))}
                     </div>
