@@ -71,6 +71,15 @@ export async function queryAI(model, query, session, timeoutMs = 45000) {
  * Analyze AI response for brand mentions
  */
 export function analyzeResponse(response, brandName, competitors = []) {
+  // Ensure competitors is an array
+  if (!Array.isArray(competitors)) {
+    if (typeof competitors === 'string') {
+      try { competitors = JSON.parse(competitors) } catch { competitors = [] }
+    } else {
+      competitors = []
+    }
+  }
+  
   const lowerResponse = response.toLowerCase()
   const lowerBrand = brandName.toLowerCase()
   
@@ -228,8 +237,12 @@ export function generateQueries(brand, platforms) {
 export function calculateMetrics(results, platforms, competitors = []) {
   if (!results || results.length === 0) return null
   
+  // Ensure platforms and competitors are arrays
+  if (!Array.isArray(platforms)) platforms = []
+  if (!Array.isArray(competitors)) competitors = []
+  
   // Overall visibility score
-  const scores = results.map(r => MENTION_TYPES[r.brand_mention || r.brandMention]?.score || 0)
+  const scores = results.map(r => MENTION_TYPES[r.brand_mention || r.mention_type || r.brandMention]?.score || 0)
   const visibilityScore = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
   
   // By platform
@@ -237,12 +250,12 @@ export function calculateMetrics(results, platforms, competitors = []) {
   platforms.forEach(pid => {
     const platformResults = results.filter(r => r.platform_id === pid || r.platformId === pid)
     if (platformResults.length > 0) {
-      const pScores = platformResults.map(r => MENTION_TYPES[r.brand_mention || r.brandMention]?.score || 0)
+      const pScores = platformResults.map(r => MENTION_TYPES[r.brand_mention || r.mention_type || r.brandMention]?.score || 0)
       byPlatform[pid] = {
         score: Math.round(pScores.reduce((a, b) => a + b, 0) / pScores.length),
         tests: platformResults.length,
-        leader: platformResults.filter(r => (r.brand_mention || r.brandMention) === 'leader').length,
-        mentioned: platformResults.filter(r => (r.brand_mention || r.brandMention) !== 'notMentioned').length
+        leader: platformResults.filter(r => (r.brand_mention || r.mention_type || r.brandMention) === 'leader').length,
+        mentioned: platformResults.filter(r => (r.brand_mention || r.mention_type || r.brandMention) !== 'notMentioned').length
       }
     }
   })
@@ -253,7 +266,7 @@ export function calculateMetrics(results, platforms, competitors = []) {
   types.forEach(type => {
     const typeResults = results.filter(r => (r.query_type || r.queryType) === type)
     if (typeResults.length > 0) {
-      const tScores = typeResults.map(r => MENTION_TYPES[r.brand_mention || r.brandMention]?.score || 0)
+      const tScores = typeResults.map(r => MENTION_TYPES[r.brand_mention || r.mention_type || r.brandMention]?.score || 0)
       byType[type] = Math.round(tScores.reduce((a, b) => a + b, 0) / tScores.length)
     }
   })
@@ -261,7 +274,7 @@ export function calculateMetrics(results, platforms, competitors = []) {
   // Mention distribution
   const mentionDist = {}
   Object.keys(MENTION_TYPES).forEach(type => {
-    mentionDist[type] = results.filter(r => (r.brand_mention || r.brandMention) === type).length
+    mentionDist[type] = results.filter(r => (r.brand_mention || r.mention_type || r.brandMention) === type).length
   })
   
   // Competitor scores
@@ -289,7 +302,7 @@ export function calculateMetrics(results, platforms, competitors = []) {
     const day = (r.created_at || r.timestamp)?.slice(0, 10)
     if (day) {
       if (!dailyData[day]) dailyData[day] = []
-      dailyData[day].push(MENTION_TYPES[r.brand_mention || r.brandMention]?.score || 0)
+      dailyData[day].push(MENTION_TYPES[r.brand_mention || r.mention_type || r.brandMention]?.score || 0)
     }
   })
   

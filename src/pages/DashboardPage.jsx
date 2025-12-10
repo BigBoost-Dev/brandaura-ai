@@ -62,7 +62,20 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (brandResults.length > 0 && activeBrand) {
-      const m = calculateMetrics(brandResults, activeBrand.selected_platforms || [], activeBrand.competitors || [])
+      // Safely parse arrays that might be JSON strings
+      let platforms = activeBrand.selected_platforms || []
+      if (typeof platforms === 'string') {
+        try { platforms = JSON.parse(platforms) } catch { platforms = [] }
+      }
+      if (!Array.isArray(platforms)) platforms = []
+      
+      let competitors = activeBrand.competitors || []
+      if (typeof competitors === 'string') {
+        try { competitors = JSON.parse(competitors) } catch { competitors = [] }
+      }
+      if (!Array.isArray(competitors)) competitors = []
+      
+      const m = calculateMetrics(brandResults, platforms, competitors)
       setMetrics(m)
     } else setMetrics(null)
   }, [brandResults, activeBrand])
@@ -72,9 +85,13 @@ export default function Dashboard() {
   }, [brands, authLoading])
 
   const handleRunTracking = async () => {
+    console.log('[handleRunTracking] Button clicked!', { activeBrand: activeBrand?.name, userId: user?.id })
     if (activeBrand && user) {
+      console.log('[handleRunTracking] Calling runTracking...')
       await runTracking(activeBrand, user.id)
       loadResults(activeBrand.id)
+    } else {
+      console.log('[handleRunTracking] BLOCKED - activeBrand:', !!activeBrand, 'user:', !!user)
     }
   }
 
