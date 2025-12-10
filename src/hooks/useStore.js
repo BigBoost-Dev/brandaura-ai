@@ -46,9 +46,10 @@ export const useAuthStore = create(
         try {
           set({ loading: true, error: null })
           await auth.signInWithGoogle()
+          return { error: null }
         } catch (error) {
           set({ error: error.message, loading: false })
-          throw error
+          return { error }
         }
       },
 
@@ -59,10 +60,10 @@ export const useAuthStore = create(
           const { user } = await auth.signIn(email, password)
           const profile = await db.profiles.get(user.id)
           set({ user, profile, loading: false })
-          return user
+          return { user, error: null }
         } catch (error) {
           set({ error: error.message, loading: false })
-          throw error
+          return { error }
         }
       },
 
@@ -72,10 +73,10 @@ export const useAuthStore = create(
           set({ loading: true, error: null })
           const { user } = await auth.signUp(email, password, metadata)
           set({ user, loading: false })
-          return user
+          return { user, error: null }
         } catch (error) {
           set({ error: error.message, loading: false })
-          throw error
+          return { error }
         }
       },
 

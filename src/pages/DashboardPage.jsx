@@ -70,10 +70,10 @@ export default function Dashboard() {
     }
   }
 
-  if (authLoading) return <div className="min-h-screen bg-dark-400 flex items-center justify-center"><div className="spinner w-8 h-8" /></div>
+  if (authLoading) return <div className="min-h-screen bg-[#09090b] flex items-center justify-center"><div className="w-6 h-6 border-2 border-amber-500/20 border-t-amber-500 rounded-full animate-spin" /></div>
 
   return (
-    <div className="min-h-screen bg-dark-400 text-white">
+    <div className="min-h-screen bg-[#09090b] text-white">
       {/* Topic Tracking Wizard Modal */}
       {showTopicWizard && (
         <TopicTrackingWizard
@@ -114,7 +114,7 @@ export default function Dashboard() {
           onClose={() => setSidebarOpen(false)}
         />
         
-        <main className="flex-1 p-4 md:p-6 lg:ml-60">
+        <main className="flex-1 p-4 md:p-6">
           {activeTab === 'dashboard' && <DashboardView metrics={metrics} activeBrand={activeBrand} onRunTests={handleRunTracking} isRunning={isTracking} onOpenTopicWizard={() => setShowTopicWizard(true)} />}
           {activeTab === 'score' && (
             <ContentScoreDashboard 
