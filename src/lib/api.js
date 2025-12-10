@@ -23,36 +23,29 @@ async function getSession() {
 /**
  * Query AI through the secure backend proxy
  */
-export async function queryAI(model, query, timeoutMs = 30000) {
-  const controller = new AbortController()
-  const timeoutId = setTimeout(() => {
-    console.log('Query timeout triggered')
-    controller.abort()
-  }, timeoutMs)
-  
+export async function queryAI(model, query, timeoutMs = 20000) {
   try {
     const session = await getSession()
     
     if (!session) {
-      clearTimeout(timeoutId)
       return { success: false, error: 'Not authenticated' }
     }
     
-    console.log(`Calling API: ${model}`)
-    
-    const response = await fetch(`${SUPABASE_URL}/functions/v1/query-ai`, {
+    // Use Promise.race to guarantee timeout
+    const fetchPromise = fetch(`${SUPABASE_URL}/functions/v1/query-ai`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${session.access_token}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ model, query }),
-      signal: controller.signal
+      body: JSON.stringify({ model, query })
     })
-
-    clearTimeout(timeoutId)
     
-    console.log(`API response: ${response.status}`)
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('TIMEOUT')), timeoutMs)
+    )
+    
+    const response = await Promise.race([fetchPromise, timeoutPromise])
 
     if (!response.ok) {
       const errorText = await response.text()
@@ -68,10 +61,9 @@ export async function queryAI(model, query, timeoutMs = 30000) {
       cost: data.usage ? (data.usage.prompt_tokens * 0.000001 + data.usage.completion_tokens * 0.000002) : 0
     }
   } catch (error) {
-    clearTimeout(timeoutId)
-    if (error.name === 'AbortError') {
-      console.log('Request aborted/timed out')
-      return { success: false, error: 'Request timed out' }
+    if (error.message === 'TIMEOUT') {
+      console.log(`Timeout after ${timeoutMs/1000}s`)
+      return { success: false, error: `Timed out (${timeoutMs/1000}s)` }
     }
     console.error('queryAI error:', error.message)
     return { success: false, error: error.message }

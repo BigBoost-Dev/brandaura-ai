@@ -31,8 +31,6 @@ export function useTracking() {
     const prompts = settings.prompts || []
     const engines = settings.engines || ['chatgpt-auto', 'perplexity', 'gemini']
     const topics = settings.topics || []
-    
-    console.log('Tracking config:', { prompts: prompts.length, engines: engines.length, topics: topics.length })
 
     if (prompts.length === 0) {
       addLog('❌ No prompts configured. Use Topic Wizard to set up tracking.', 'error')
@@ -66,8 +64,6 @@ export function useTracking() {
           continue
         }
 
-        console.log(`[${queryIndex}/${totalQueries}] Starting: ${engine.name}`)
-
         setProgress({
           current: queryIndex,
           total: totalQueries,
@@ -77,15 +73,12 @@ export function useTracking() {
         })
 
         try {
-          console.log(`[${queryIndex}] Calling queryAI...`)
-          const { success, response, cost, error } = await queryAI(engine.model, prompt.text, 45000)
-          console.log(`[${queryIndex}] queryAI returned: success=${success}, responseLength=${response?.length || 0}`)
+          const { success, response, cost, error } = await queryAI(engine.model, prompt.text, 30000)
 
           if (abortRef.current?.signal.aborted) break
 
           if (success && response) {
             try {
-              console.log(`[${queryIndex}] Starting analysis...`)
               // Parse competitors if it's a JSON string
               let parsedCompetitors = brand.competitors || []
               if (typeof parsedCompetitors === 'string') {
@@ -94,16 +87,14 @@ export function useTracking() {
               parsedCompetitors = parsedCompetitors.map(c => typeof c === 'object' ? c.name : c)
               
               const analysis = analyzeResponse(response, brand.name, parsedCompetitors)
-              console.log(`[${queryIndex}] Analysis done: ${analysis.brandMention}`)
               
               // Extract sources from response
               let sources = []
               try {
                 sources = extractSources(response, analysis.citedUrls || [])
               } catch (e) {
-                console.warn('Source extraction failed:', e)
+                // Silently ignore source extraction errors
               }
-              console.log(`[${queryIndex}] Sources extracted: ${sources.length}`)
               
               // Find topic info
               const topic = topics.find(t => t.id === prompt.topicId) || {}
@@ -165,11 +156,9 @@ export function useTracking() {
           addLog(`❌ ${engine.name}: ${err.message}`, 'error')
         }
 
-        // Shorter delay between queries (2 seconds)
+        // Short delay between queries (1 second)
         if (!abortRef.current?.signal.aborted) {
-          console.log(`[${queryIndex}] Waiting 2 seconds...`)
-          await new Promise(r => setTimeout(r, 2000))
-          console.log(`[${queryIndex}] Done waiting, next iteration`)
+          await new Promise(r => setTimeout(r, 1000))
         }
       }
     }
