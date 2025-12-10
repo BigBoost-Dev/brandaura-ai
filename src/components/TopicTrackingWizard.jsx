@@ -73,9 +73,9 @@ export default function TopicTrackingWizard({ userId, onComplete, onCancel }) {
     const timeout = setTimeout(() => {
       console.log('Competitor generation timed out, using fallback')
       setCompetitors([
-        { name: 'Competitor 1', domain: 'competitor1.com' }, 
-        { name: 'Competitor 2', domain: 'competitor2.com' },
-        { name: 'Competitor 3', domain: 'competitor3.com' }
+        { name: 'Competitor 1' }, 
+        { name: 'Competitor 2' },
+        { name: 'Competitor 3' }
       ])
       setGenerating(false)
     }, 10000) // 10 second timeout
@@ -101,9 +101,9 @@ export default function TopicTrackingWizard({ userId, onComplete, onCancel }) {
       }
       // API returned but no valid data - use fallback
       setCompetitors([
-        { name: 'Competitor 1', domain: 'competitor1.com' }, 
-        { name: 'Competitor 2', domain: 'competitor2.com' },
-        { name: 'Competitor 3', domain: 'competitor3.com' }
+        { name: 'Competitor 1' }, 
+        { name: 'Competitor 2' },
+        { name: 'Competitor 3' }
       ])
       setGenerating(false)
     } catch (e) { 
@@ -111,9 +111,9 @@ export default function TopicTrackingWizard({ userId, onComplete, onCancel }) {
       console.error('Generate competitors error:', e) 
       // Fallback on error
       setCompetitors([
-        { name: 'Competitor 1', domain: 'competitor1.com' }, 
-        { name: 'Competitor 2', domain: 'competitor2.com' },
-        { name: 'Competitor 3', domain: 'competitor3.com' }
+        { name: 'Competitor 1' }, 
+        { name: 'Competitor 2' },
+        { name: 'Competitor 3' }
       ])
       setGenerating(false)
     }
@@ -172,7 +172,7 @@ export default function TopicTrackingWizard({ userId, onComplete, onCancel }) {
   const addCompetitor = () => {
     const name = competitorInput.trim()
     if (name) {
-      setCompetitors([...competitors, { name, domain: name.toLowerCase().replace(/\s/g, '') + '.com' }])
+      setCompetitors([...competitors, { name }])
       setCompetitorInput('')
     }
   }
@@ -354,9 +354,9 @@ export default function TopicTrackingWizard({ userId, onComplete, onCancel }) {
                   <button 
                     onClick={() => {
                       setCompetitors([
-                        { name: 'Competitor 1', domain: 'competitor1.com' }, 
-                        { name: 'Competitor 2', domain: 'competitor2.com' },
-                        { name: 'Competitor 3', domain: 'competitor3.com' }
+                        { name: 'Competitor 1' }, 
+                        { name: 'Competitor 2' },
+                        { name: 'Competitor 3' }
                       ])
                       setGenerating(false)
                     }}
@@ -372,7 +372,7 @@ export default function TopicTrackingWizard({ userId, onComplete, onCancel }) {
                       <div key={i} className="flex items-center justify-between p-4 rounded-xl bg-white/[0.02] border border-white/[0.06]">
                         <div>
                           <div className="text-[14px] text-white">{comp.name}</div>
-                          <div className="text-[12px] text-white/40">{comp.domain}</div>
+                          {comp.domain && <div className="text-[12px] text-white/40">{comp.domain}</div>}
                         </div>
                         <button 
                           onClick={() => setCompetitors(competitors.filter((_, j) => j !== i))} 
