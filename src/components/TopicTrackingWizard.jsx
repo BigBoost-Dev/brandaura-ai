@@ -285,25 +285,36 @@ JSON only: [{"text":"prompt","type":"branded|unbranded|comparison","topic":"topi
       
       const brandData = {
         name: cleanBrandName,
+        domain: cleanWebsite.replace(/^https?:\/\//, '').replace(/\/$/, ''),
         website: cleanWebsite,
+        category: industry,
         industry: industry,
-        competitors: competitors.slice(0, 10).map(c => c.name),
+        use_case: 'enterprise',
+        competitors: JSON.stringify(competitors.slice(0, 10).map(c => ({ name: c.name }))),
+        selected_platforms: JSON.stringify(selectedEngines),
         settings
       }
       
-      console.log('Saving brand:', brandData)
+      console.log('=== SAVING BRAND ===')
+      console.log('userId:', userId)
+      console.log('brandData:', JSON.stringify(brandData, null, 2))
       
       if (isEditMode && editBrand?.id) {
-        await updateBrand(editBrand.id, brandData)
+        console.log('Updating brand:', editBrand.id)
+        const result = await updateBrand(editBrand.id, brandData)
+        console.log('Update result:', result)
       } else {
+        console.log('Creating new brand...')
         const newBrand = await addBrand({ user_id: userId, ...brandData })
+        console.log('Create result:', newBrand)
         if (newBrand?.id) setActiveBrand(newBrand.id)
       }
       
+      console.log('=== SAVE COMPLETE ===')
       if (userId) await loadBrands(userId)
       if (onComplete) onComplete()
     } catch (e) {
-      console.error('Save error:', e)
+      console.error('=== SAVE ERROR ===', e)
       setError(e?.message || 'Failed to save. Please try again.')
     } finally {
       setLoading(false)
