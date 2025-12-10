@@ -129,20 +129,13 @@ export const db = {
     },
 
     async create(brand) {
-      console.log('db.brands.create called with:', brand)
-      try {
-        const { data, error } = await supabase
-          .from('brands')
-          .insert(brand)
-          .select()
-          .single()
-        console.log('db.brands.create response:', { data, error })
-        if (error) throw error
-        return data
-      } catch (e) {
-        console.error('db.brands.create error:', e)
-        throw e
-      }
+      const { data, error } = await supabase
+        .from('brands')
+        .insert(brand)
+        .select()
+        .single()
+      if (error) throw error
+      return data
     },
 
     async update(brandId, updates) {

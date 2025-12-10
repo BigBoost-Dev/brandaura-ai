@@ -41,7 +41,7 @@ export default function TopicTrackingWizard({ userId, onComplete, onCancel, edit
   
   // Step 2
   const [competitors, setCompetitors] = useState(
-    editBrand?.competitors?.map(c => ({ name: c })) || []
+    editBrand?.competitors?.map(c => typeof c === 'string' ? { name: c } : c) || []
   )
   const [competitorInput, setCompetitorInput] = useState('')
   
@@ -262,10 +262,10 @@ JSON only: [{"text":"prompt","type":"branded|unbranded|comparison","topic":"topi
     setLoading(true)
     setError('')
     
-    console.log('=== Starting brand save ===')
-    
     try {
       const sanitize = (str) => String(str || '').trim().slice(0, 500)
+      const cleanWebsite = website.trim().toLowerCase()
+      const cleanBrandName = brandName.trim() || cleanWebsite
       
       const settings = {
         engines: selectedEngines,
@@ -282,38 +282,28 @@ JSON only: [{"text":"prompt","type":"branded|unbranded|comparison","topic":"topi
           topicName: sanitize(p.topicName)
         })),
       }
-
-      const cleanWebsite = website.trim().toLowerCase()
-      const cleanBrandName = brandName.trim() || cleanWebsite
       
       const brandData = {
         name: cleanBrandName,
         website: cleanWebsite,
-        brand_names: [cleanBrandName],
         industry: industry,
         competitors: competitors.slice(0, 10).map(c => c.name),
         settings
       }
       
-      console.log('Brand data:', JSON.stringify(brandData, null, 2))
-      console.log('userId:', userId)
+      console.log('Saving brand:', brandData)
       
       if (isEditMode && editBrand?.id) {
-        console.log('Updating brand:', editBrand.id)
-        const result = await updateBrand(editBrand.id, brandData)
-        console.log('Update result:', result)
+        await updateBrand(editBrand.id, brandData)
       } else {
-        console.log('Creating new brand...')
         const newBrand = await addBrand({ user_id: userId, ...brandData })
-        console.log('Create result:', newBrand)
         if (newBrand?.id) setActiveBrand(newBrand.id)
       }
       
-      console.log('Save successful!')
       if (userId) await loadBrands(userId)
       if (onComplete) onComplete()
     } catch (e) {
-      console.error('=== Save failed ===', e)
+      console.error('Save error:', e)
       setError(e?.message || 'Failed to save. Please try again.')
     } finally {
       setLoading(false)
