@@ -20,7 +20,15 @@ export function useTracking() {
   }, [])
 
   const runTracking = useCallback(async (brand, userId) => {
-    if (isRunning || !brand || !userId) return
+    console.log('runTracking called', { brand: brand?.name, userId, isRunning })
+    if (isRunning || !brand || !userId) {
+      console.log('runTracking early return:', { isRunning, brand: !!brand, userId: !!userId })
+      return
+    }
+    
+    // Set running state FIRST
+    setIsRunning(true)
+    setLogs([])
     
     // Parse settings if it's a JSON string
     let settings = brand.settings || {}
@@ -34,12 +42,21 @@ export function useTracking() {
 
     if (prompts.length === 0) {
       addLog('❌ No prompts configured. Use Topic Wizard to set up tracking.', 'error')
+      setIsRunning(false)
       return
     }
 
     // Get session ONCE before starting
     addLog('🔑 Getting authentication...', 'info')
-    const session = await getAuthSession()
+    let session
+    try {
+      session = await getAuthSession()
+    } catch (err) {
+      addLog(`❌ Auth error: ${err.message}`, 'error')
+      setIsRunning(false)
+      return
+    }
+    
     if (!session) {
       addLog('❌ Not authenticated. Please log in again.', 'error')
       setIsRunning(false)
@@ -48,8 +65,6 @@ export function useTracking() {
     addLog('✅ Authenticated', 'info')
 
     abortRef.current = new AbortController()
-    setIsRunning(true)
-    setLogs([])
     
     const totalQueries = prompts.length * engines.length
     setProgress({ current: 0, total: totalQueries, percentage: 0, prompt: '', engine: '' })

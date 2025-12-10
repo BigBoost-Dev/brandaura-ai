@@ -72,9 +72,13 @@ export default function Dashboard() {
   }, [brands, authLoading])
 
   const handleRunTracking = async () => {
+    console.log('handleRunTracking called', { activeBrand: !!activeBrand, user: !!user })
     if (activeBrand && user) {
+      console.log('Starting runTracking...')
       await runTracking(activeBrand, user.id)
       loadResults(activeBrand.id)
+    } else {
+      console.log('Missing activeBrand or user')
     }
   }
 
