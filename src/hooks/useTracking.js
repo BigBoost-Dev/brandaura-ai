@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react'
-import { queryAI, analyzeResponse } from '../lib/api'
+import { queryAI, analyzeResponse, getAuthSession } from '../lib/api'
 import { extractSources } from '../lib/aiAnalysis'
 import { AI_SEARCH_ENGINES } from '../lib/constants'
 import { useResultsStore } from './useStore'
@@ -36,6 +36,16 @@ export function useTracking() {
       addLog('❌ No prompts configured. Use Topic Wizard to set up tracking.', 'error')
       return
     }
+
+    // Get session ONCE before starting
+    addLog('🔑 Getting authentication...', 'info')
+    const session = await getAuthSession()
+    if (!session) {
+      addLog('❌ Not authenticated. Please log in again.', 'error')
+      setIsRunning(false)
+      return
+    }
+    addLog('✅ Authenticated', 'info')
 
     abortRef.current = new AbortController()
     setIsRunning(true)
@@ -75,8 +85,7 @@ export function useTracking() {
         })
 
         try {
-          console.log(`[Loop] Calling queryAI...`)
-          const { success, response, cost, error } = await queryAI(engine.model, prompt.text, 30000)
+          const { success, response, cost, error } = await queryAI(engine.model, prompt.text, session, 30000)
           console.log(`[Loop] queryAI returned: success=${success}`)
 
           if (abortRef.current?.signal.aborted) break

@@ -3,61 +3,21 @@ import { MENTION_TYPES } from './constants'
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
 
-// Cache session to avoid repeated auth calls
-let cachedSession = null
-let sessionExpiry = 0
-
-async function getSession() {
-  const now = Date.now()
-  if (cachedSession && sessionExpiry > now) {
-    console.log('[getSession] Using cached session')
-    return cachedSession
-  }
-  
-  console.log('[getSession] Fetching new session...')
-  try {
-    const { data: { session } } = await supabase.auth.getSession()
-    console.log('[getSession] Got session:', !!session)
-    if (session) {
-      cachedSession = session
-      sessionExpiry = now + 5 * 60 * 1000 // Cache for 5 minutes
-    }
-    return session
-  } catch (err) {
-    console.error('[getSession] Error:', err)
-    return cachedSession // Return cached even if expired
-  }
-}
-
 /**
  * Query AI through the secure backend proxy
+ * Session is passed in to avoid repeated getSession calls
  */
-export async function queryAI(model, query, timeoutMs = 30000) {
+export async function queryAI(model, query, session, timeoutMs = 30000) {
   console.log(`[queryAI] Starting: ${model}`)
   
+  if (!session?.access_token) {
+    console.log('[queryAI] No session provided')
+    return { success: false, error: 'Not authenticated' }
+  }
+  
   try {
-    // Get session first (with its own timeout)
-    const sessionPromise = getSession()
-    const sessionTimeout = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('SESSION_TIMEOUT')), 5000)
-    )
-    
-    let session
-    try {
-      session = await Promise.race([sessionPromise, sessionTimeout])
-    } catch (e) {
-      console.log('[queryAI] Session timeout, using cached')
-      session = cachedSession
-    }
-    
-    if (!session) {
-      console.log('[queryAI] No session available')
-      return { success: false, error: 'Not authenticated' }
-    }
-    
     console.log('[queryAI] Fetching...')
     
-    // Now do the actual API call with timeout
     const controller = new AbortController()
     const fetchTimeout = setTimeout(() => controller.abort(), timeoutMs)
     
@@ -90,11 +50,24 @@ export async function queryAI(model, query, timeoutMs = 30000) {
     }
   } catch (error) {
     if (error.name === 'AbortError') {
-      console.log(`[queryAI] Fetch aborted/timed out`)
+      console.log(`[queryAI] Timed out after ${timeoutMs/1000}s`)
       return { success: false, error: `Timed out (${timeoutMs/1000}s)` }
     }
     console.error('[queryAI] Error:', error.message)
     return { success: false, error: error.message }
+  }
+}
+
+/**
+ * Get current session - call this ONCE before starting tracking
+ */
+export async function getAuthSession() {
+  try {
+    const { data: { session } } = await supabase.auth.getSession()
+    return session
+  } catch (err) {
+    console.error('[getAuthSession] Error:', err)
+    return null
   }
 }
 
