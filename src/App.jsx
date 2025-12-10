@@ -47,30 +47,30 @@ function PublicRoute({ children }) {
 }
 
 export default function App() {
-  const { initialize, loading } = useAuthStore()
+  const { initialize, user, loading } = useAuthStore()
   const location = useLocation()
-  const [initialized, setInitialized] = useState(false)
+  const [authReady, setAuthReady] = useState(false)
 
   // Initialize auth on mount
   useEffect(() => {
     const init = async () => {
       await initialize()
-      setInitialized(true)
+      
+      // If there's an OAuth hash, wait a bit for session to process
+      if (window.location.hash && window.location.hash.includes('access_token')) {
+        // Clean URL
+        window.history.replaceState(null, '', window.location.pathname)
+        // Wait for auth state to settle
+        await new Promise(resolve => setTimeout(resolve, 500))
+      }
+      
+      setAuthReady(true)
     }
     init()
   }, [])
 
-  // Clean up OAuth tokens from URL hash
-  useEffect(() => {
-    if (window.location.hash && window.location.hash.includes('access_token')) {
-      // Clean the URL without reloading
-      const cleanUrl = window.location.pathname + window.location.search
-      window.history.replaceState(null, '', cleanUrl)
-    }
-  }, [location])
-
-  // Show loading until auth is initialized
-  if (!initialized || loading) {
+  // Show loading until auth is fully ready
+  if (!authReady || loading) {
     return <LoadingScreen />
   }
 

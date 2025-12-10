@@ -16,7 +16,33 @@ export const useAuthStore = create(
         try {
           set({ loading: true, error: null })
           
-          // Get current session - Supabase handles OAuth callback automatically
+          // Check if this is an OAuth callback (has hash with access_token)
+          const isOAuthCallback = window.location.hash && window.location.hash.includes('access_token')
+          
+          if (isOAuthCallback) {
+            // For OAuth callback, wait for onAuthStateChange to handle it
+            // Supabase will automatically process the hash
+            return new Promise((resolve) => {
+              const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+                console.log('Auth event:', event)
+                
+                if (session?.user) {
+                  let profile = null
+                  try {
+                    profile = await db.profiles.get(session.user.id)
+                  } catch (e) {
+                    console.warn('Profile fetch failed:', e)
+                  }
+                  set({ user: session.user, profile, loading: false })
+                } else if (event === 'SIGNED_OUT') {
+                  set({ user: null, profile: null, loading: false })
+                }
+                resolve()
+              })
+            })
+          }
+          
+          // Normal initialization - get existing session
           const { data: { session }, error: sessionError } = await supabase.auth.getSession()
           
           if (sessionError) {
@@ -37,11 +63,11 @@ export const useAuthStore = create(
             set({ user: null, profile: null, loading: false })
           }
           
-          // Listen for auth changes
+          // Listen for future auth changes
           supabase.auth.onAuthStateChange(async (event, session) => {
             console.log('Auth event:', event)
             
-            if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
+            if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
               if (session?.user) {
                 let profile = null
                 try {
