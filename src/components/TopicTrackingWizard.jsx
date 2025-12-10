@@ -272,7 +272,7 @@ JSON only: [{"text":"prompt","type":"branded|unbranded|comparison","topic":"topi
           name: sanitize(t.name),
           description: sanitize(t.description)
         })),
-        prompts: prompts.map(p => ({
+        prompts: prompts.slice(0, 50).map(p => ({
           id: p.id,
           text: sanitize(p.text),
           type: p.type,
@@ -287,36 +287,32 @@ JSON only: [{"text":"prompt","type":"branded|unbranded|comparison","topic":"topi
       const brandData = {
         name: cleanBrandName,
         website: cleanWebsite,
-        brand_names: cleanBrandName ? [cleanBrandName] : [],
+        brand_names: [cleanBrandName],
         industry: industry,
-        competitors: competitors.map(c => c.name),
+        competitors: competitors.slice(0, 10).map(c => c.name),
         settings
       }
       
+      // 10 second timeout
+      const timeout = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Save timed out. Please try again.')), 10000)
+      )
+      
       if (isEditMode && editBrand?.id) {
-        // Update existing brand
-        await updateBrand(editBrand.id, brandData)
+        await Promise.race([updateBrand(editBrand.id, brandData), timeout])
       } else {
-        // Create new brand
-        const newBrand = await addBrand({
-          user_id: userId,
-          ...brandData
-        })
-        
-        if (newBrand?.id) {
-          setActiveBrand(newBrand.id)
-        }
+        const newBrand = await Promise.race([
+          addBrand({ user_id: userId, ...brandData }), 
+          timeout
+        ])
+        if (newBrand?.id) setActiveBrand(newBrand.id)
       }
       
-      // Refresh brands list
-      if (userId) {
-        await loadBrands(userId)
-      }
-      
+      if (userId) await loadBrands(userId)
       if (onComplete) onComplete()
     } catch (e) {
-      console.error('Save error:', e)
       setError(e?.message || 'Failed to save. Please try again.')
+    } finally {
       setLoading(false)
     }
   }
@@ -667,14 +663,6 @@ JSON only: [{"text":"prompt","type":"branded|unbranded|comparison","topic":"topi
                     {prompts.length * selectedEngines.length}
                   </div>
                 </div>
-                
-                {loading && (
-                  <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20">
-                    <p className="text-[13px] text-blue-400">
-                      Setting up your brand... This will close automatically.
-                    </p>
-                  </div>
-                )}
               </div>
             </div>
           )}
