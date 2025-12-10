@@ -23,49 +23,63 @@ async function getSession() {
 /**
  * Query AI through the secure backend proxy
  */
-export async function queryAI(model, query, timeoutMs = 20000) {
+export async function queryAI(model, query, timeoutMs = 30000) {
+  console.log(`[queryAI] Starting: ${model}`)
+  
+  const timeoutPromise = new Promise((_, reject) => 
+    setTimeout(() => {
+      console.log(`[queryAI] TIMEOUT after ${timeoutMs}ms`)
+      reject(new Error('TIMEOUT'))
+    }, timeoutMs)
+  )
+  
+  const mainPromise = (async () => {
+    try {
+      const session = await getSession()
+      console.log(`[queryAI] Got session`)
+      
+      if (!session) {
+        return { success: false, error: 'Not authenticated' }
+      }
+      
+      console.log(`[queryAI] Fetching...`)
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/query-ai`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ model, query })
+      })
+      
+      console.log(`[queryAI] Response: ${response.status}`)
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        return { success: false, error: errorText || `API error: ${response.status}` }
+      }
+
+      const data = await response.json()
+      console.log(`[queryAI] Success, length: ${data.choices?.[0]?.message?.content?.length || 0}`)
+      
+      return {
+        success: true,
+        response: data.choices?.[0]?.message?.content || '',
+        usage: data.usage,
+        cost: data.usage ? (data.usage.prompt_tokens * 0.000001 + data.usage.completion_tokens * 0.000002) : 0
+      }
+    } catch (err) {
+      console.log(`[queryAI] Error: ${err.message}`)
+      return { success: false, error: err.message }
+    }
+  })()
+  
   try {
-    const session = await getSession()
-    
-    if (!session) {
-      return { success: false, error: 'Not authenticated' }
-    }
-    
-    // Use Promise.race to guarantee timeout
-    const fetchPromise = fetch(`${SUPABASE_URL}/functions/v1/query-ai`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${session.access_token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ model, query })
-    })
-    
-    const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('TIMEOUT')), timeoutMs)
-    )
-    
-    const response = await Promise.race([fetchPromise, timeoutPromise])
-
-    if (!response.ok) {
-      const errorText = await response.text()
-      return { success: false, error: errorText || `API error: ${response.status}` }
-    }
-
-    const data = await response.json()
-    
-    return {
-      success: true,
-      response: data.choices?.[0]?.message?.content || '',
-      usage: data.usage,
-      cost: data.usage ? (data.usage.prompt_tokens * 0.000001 + data.usage.completion_tokens * 0.000002) : 0
-    }
+    return await Promise.race([mainPromise, timeoutPromise])
   } catch (error) {
     if (error.message === 'TIMEOUT') {
-      console.log(`Timeout after ${timeoutMs/1000}s`)
       return { success: false, error: `Timed out (${timeoutMs/1000}s)` }
     }
-    console.error('queryAI error:', error.message)
     return { success: false, error: error.message }
   }
 }
