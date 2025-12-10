@@ -68,10 +68,24 @@ export default function TopicTrackingWizard({ userId, onComplete, onCancel }) {
 
   const generateCompetitors = async () => {
     setGenerating(true)
+    
+    // Set a timeout - if API takes too long, use fallback
+    const timeout = setTimeout(() => {
+      console.log('Competitor generation timed out, using fallback')
+      setCompetitors([
+        { name: 'Competitor 1', domain: 'competitor1.com' }, 
+        { name: 'Competitor 2', domain: 'competitor2.com' },
+        { name: 'Competitor 3', domain: 'competitor3.com' }
+      ])
+      setGenerating(false)
+    }, 10000) // 10 second timeout
+    
     try {
       const result = await queryAI('openai/gpt-4o-mini', 
         `List 5 competitors for ${website} in ${industry}. Return ONLY a JSON array: [{"name":"Company Name","domain":"domain.com"}]`
       )
+      clearTimeout(timeout)
+      
       if (result?.success && result?.response) {
         const match = result.response.match(/\[[\s\S]*?\]/)
         if (match) {
@@ -85,16 +99,24 @@ export default function TopicTrackingWizard({ userId, onComplete, onCancel }) {
           } catch (e) {}
         }
       }
+      // API returned but no valid data - use fallback
+      setCompetitors([
+        { name: 'Competitor 1', domain: 'competitor1.com' }, 
+        { name: 'Competitor 2', domain: 'competitor2.com' },
+        { name: 'Competitor 3', domain: 'competitor3.com' }
+      ])
+      setGenerating(false)
     } catch (e) { 
+      clearTimeout(timeout)
       console.error('Generate competitors error:', e) 
+      // Fallback on error
+      setCompetitors([
+        { name: 'Competitor 1', domain: 'competitor1.com' }, 
+        { name: 'Competitor 2', domain: 'competitor2.com' },
+        { name: 'Competitor 3', domain: 'competitor3.com' }
+      ])
+      setGenerating(false)
     }
-    // Fallback
-    setCompetitors([
-      { name: 'Competitor 1', domain: 'competitor1.com' }, 
-      { name: 'Competitor 2', domain: 'competitor2.com' },
-      { name: 'Competitor 3', domain: 'competitor3.com' }
-    ])
-    setGenerating(false)
   }
 
   const generatePrompts = async () => {
@@ -324,9 +346,24 @@ export default function TopicTrackingWizard({ userId, onComplete, onCancel }) {
               </div>
               
               {generating ? (
-                <div className="flex items-center justify-center py-12 text-white/40">
-                  {Icons.loader}
-                  <span className="ml-2">Finding competitors...</span>
+                <div className="flex flex-col items-center justify-center py-12">
+                  <div className="flex items-center text-white/40">
+                    {Icons.loader}
+                    <span className="ml-2">Finding competitors...</span>
+                  </div>
+                  <button 
+                    onClick={() => {
+                      setCompetitors([
+                        { name: 'Competitor 1', domain: 'competitor1.com' }, 
+                        { name: 'Competitor 2', domain: 'competitor2.com' },
+                        { name: 'Competitor 3', domain: 'competitor3.com' }
+                      ])
+                      setGenerating(false)
+                    }}
+                    className="mt-4 text-[13px] text-amber-400 hover:text-amber-300"
+                  >
+                    Skip and add manually
+                  </button>
                 </div>
               ) : (
                 <>
@@ -467,9 +504,32 @@ export default function TopicTrackingWizard({ userId, onComplete, onCancel }) {
               </div>
               
               {generating ? (
-                <div className="flex items-center justify-center py-12 text-white/40">
-                  {Icons.loader}
-                  <span className="ml-2">Generating prompts...</span>
+                <div className="flex flex-col items-center justify-center py-12">
+                  <div className="flex items-center text-white/40">
+                    {Icons.loader}
+                    <span className="ml-2">Generating prompts...</span>
+                  </div>
+                  <button 
+                    onClick={() => {
+                      const fallbackPrompts = []
+                      topics.filter(t => selectedTopics.includes(t.id)).forEach(topic => {
+                        for (let i = 0; i < 5; i++) {
+                          fallbackPrompts.push({
+                            id: `${topic.id}-${i}`,
+                            topicId: topic.id,
+                            topicName: topic.name,
+                            text: `What are the best ${topic.name.toLowerCase()} options?`,
+                            type: i % 2 === 0 ? 'branded' : 'unbranded'
+                          })
+                        }
+                      })
+                      setPrompts(fallbackPrompts)
+                      setGenerating(false)
+                    }}
+                    className="mt-4 text-[13px] text-amber-400 hover:text-amber-300"
+                  >
+                    Skip and use default prompts
+                  </button>
                 </div>
               ) : (
                 <>
