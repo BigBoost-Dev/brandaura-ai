@@ -11,10 +11,13 @@ async function getSession() {
   const now = Date.now()
   // Use cached session if still valid (cache for 10 minutes)
   if (cachedSession && sessionExpiry > now) {
+    console.log('[getSession] Using cached session')
     return cachedSession
   }
   
+  console.log('[getSession] Fetching fresh session...')
   const { data: { session } } = await supabase.auth.getSession()
+  console.log('[getSession] Got session:', !!session)
   if (session) {
     cachedSession = session
     sessionExpiry = now + 10 * 60 * 1000 // 10 minutes
