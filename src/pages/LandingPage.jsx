@@ -567,7 +567,6 @@ export default function LandingPage() {
             <a href="#why" className="text-[14px] text-white/40 hover:text-white/90 transition-colors">Why</a>
             <a href="#features" className="text-[14px] text-white/40 hover:text-white/90 transition-colors">Features</a>
             <a href="#how-it-works" className="text-[14px] text-white/40 hover:text-white/90 transition-colors">How it works</a>
-            <Link to="/pricing" className="text-[14px] text-white/40 hover:text-white/90 transition-colors">Pricing</Link>
           </div>
 
           <div className="flex items-center gap-4">
