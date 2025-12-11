@@ -10,6 +10,7 @@ import Sidebar from '../components/Sidebar'
 import MetricCard from '../components/MetricCard'
 import PlatformCard from '../components/PlatformCard'
 import TopicTrackingWizard from '../components/TopicTrackingWizard'
+import DeleteConfirmModal from '../components/DeleteConfirmModal'
 import VisibilityDashboard from '../components/VisibilityDashboard'
 import CompetitorDashboard from '../components/CompetitorDashboard'
 import TopicPerformance from '../components/TopicPerformance'
@@ -32,6 +33,7 @@ export default function Dashboard() {
   const [editingBrand, setEditingBrand] = useState(null)
   const [metrics, setMetrics] = useState(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [deleteModal, setDeleteModal] = useState({ isOpen: false, brandId: null, brandName: '' })
 
   const activeBrand = getActiveBrand()
   const brandResults = activeBrand ? getResults(activeBrand.id) : []
@@ -46,6 +48,41 @@ export default function Dashboard() {
   const closeWizard = () => {
     setShowTopicWizard(false)
     setEditingBrand(null)
+  }
+  
+  const openDeleteModal = (brandId, brandName) => {
+    setDeleteModal({ isOpen: true, brandId, brandName })
+  }
+  
+  const closeDeleteModal = () => {
+    setDeleteModal({ isOpen: false, brandId: null, brandName: '' })
+  }
+  
+  const handleDeleteBrand = async () => {
+    const { brandId } = deleteModal
+    if (!brandId) return
+    
+    console.log('[Dashboard] Deleting brand:', brandId)
+    
+    try {
+      await deleteBrand(brandId)
+      console.log('[Dashboard] Delete successful')
+      
+      // Switch to another brand if we deleted the active one
+      if (activeBrandId === brandId) {
+        const remaining = brands.filter(b => b.id !== brandId)
+        if (remaining.length > 0) {
+          setActiveBrand(remaining[0].id)
+        }
+      }
+      
+      // Reload brands and close modal
+      if (user?.id) await loadBrands(user.id)
+      closeDeleteModal()
+    } catch (e) {
+      console.error('[Dashboard] Delete failed:', e)
+      throw e // Let the modal handle the error display
+    }
   }
 
   useEffect(() => {
@@ -121,21 +158,9 @@ export default function Dashboard() {
         activeBrand={activeBrand}
         onBrandChange={setActiveBrand} 
         onAddBrand={() => openWizard(null)} 
-        onDeleteBrand={async (brandId) => {
+        onDeleteBrand={(brandId, brandName) => {
           if (brands.length <= 1) return
-          try {
-            await deleteBrand(brandId)
-            // Switch to another brand if we deleted the active one
-            if (activeBrandId === brandId) {
-              const remaining = brands.filter(b => b.id !== brandId)
-              if (remaining.length > 0) {
-                setActiveBrand(remaining[0].id)
-              }
-            }
-            loadBrands(user.id)
-          } catch (e) {
-            console.error('Failed to delete brand:', e)
-          }
+          openDeleteModal(brandId, brandName)
         }}
         onOpenTopicWizard={() => openWizard(activeBrand)}
         onSignOut={signOut}
@@ -144,6 +169,14 @@ export default function Dashboard() {
         onRunTracking={handleRunTracking}
         onStopTracking={stopTracking}
         hasTrackingConfig={hasTrackingConfig}
+      />
+      
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmModal
+        isOpen={deleteModal.isOpen}
+        brandName={deleteModal.brandName}
+        onConfirm={handleDeleteBrand}
+        onCancel={closeDeleteModal}
       />
 
       <div className="min-h-[calc(100vh-56px)]">
@@ -504,32 +537,43 @@ function DashboardView({ metrics, activeBrand, onRunTests, isRunning, onOpenTopi
           )}
         </BentoCard>
 
-        {/* Funnel Breakdown */}
+        {/* Topic Breakdown - shows actual topics from results */}
         <BentoCard className="lg:col-span-2">
-          <h3 className="text-[15px] font-semibold text-white mb-5">Visibility Breakdown</h3>
+          <h3 className="text-[15px] font-semibold text-white mb-5">Visibility by Topic</h3>
           <div className="space-y-5">
-            {FUNNEL_STAGES.map(stage => {
-              const value = metrics.byType[stage.key] || 0
-              return (
-                <div key={stage.key}>
-                  <div className="flex justify-between mb-2">
-                    <span className="text-[13px] text-white/50">{stage.label}</span>
-                    <span className="text-[13px] font-semibold font-mono" style={{ color: stage.color }}>
-                      {value}%
-                    </span>
-                  </div>
-                  <div className="h-1.5 bg-white/[0.04] rounded-full overflow-hidden">
-                    <div 
-                      className="h-full rounded-full transition-all duration-500" 
-                      style={{ 
-                        width: `${value}%`, 
-                        background: stage.color 
-                      }} 
-                    />
-                  </div>
-                </div>
-              )
-            })}
+            {Object.keys(metrics.byType).length > 0 ? (
+              Object.entries(metrics.byType)
+                .sort(([,a], [,b]) => b - a)
+                .slice(0, 5)
+                .map(([topic, value], idx) => {
+                  const colors = ['#f59e0b', '#22d3ee', '#a78bfa', '#10b981', '#ec4899']
+                  const color = colors[idx % colors.length]
+                  return (
+                    <div key={topic}>
+                      <div className="flex justify-between mb-2">
+                        <span className="text-[13px] text-white/50 truncate max-w-[200px]">{topic}</span>
+                        <span className="text-[13px] font-semibold font-mono" style={{ color }}>
+                          {value}%
+                        </span>
+                      </div>
+                      <div className="h-1.5 bg-white/[0.04] rounded-full overflow-hidden">
+                        <div 
+                          className="h-full rounded-full transition-all duration-500" 
+                          style={{ 
+                            width: `${value}%`, 
+                            background: color 
+                          }} 
+                        />
+                      </div>
+                    </div>
+                  )
+                })
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-[13px] text-white/40">No topic data available</p>
+                <p className="text-[11px] text-white/30 mt-1">Run tracking to see visibility by topic</p>
+              </div>
+            )}
           </div>
         </BentoCard>
       </div>

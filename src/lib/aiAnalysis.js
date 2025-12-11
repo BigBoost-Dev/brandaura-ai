@@ -171,6 +171,9 @@ export function extractSources(response, citedUrls = []) {
  * Analyze content gaps - what competitors have that brand doesn't
  */
 export function analyzeContentGaps(results, brandName, competitors) {
+  // Helper to get mention type
+  const getMentionType = (r) => r.mention_type || r.brand_mention || r.brandMention || 'notMentioned'
+  
   const gaps = []
   const competitorStrengths = {}
   const brandWeaknesses = []
@@ -178,7 +181,7 @@ export function analyzeContentGaps(results, brandName, competitors) {
   // Group results by topic
   const topicResults = {}
   results.forEach(r => {
-    const topic = r.topic_name || r.query_type || 'General'
+    const topic = r.topic || r.topic_name || r.query_type || 'General'
     if (!topicResults[topic]) {
       topicResults[topic] = []
     }
@@ -187,8 +190,8 @@ export function analyzeContentGaps(results, brandName, competitors) {
   
   // Analyze each topic
   Object.entries(topicResults).forEach(([topic, topicData]) => {
-    const brandMentions = topicData.filter(r => r.brand_mention !== 'notMentioned')
-    const brandNotMentioned = topicData.filter(r => r.brand_mention === 'notMentioned')
+    const brandMentions = topicData.filter(r => getMentionType(r) !== 'notMentioned')
+    const brandNotMentioned = topicData.filter(r => getMentionType(r) === 'notMentioned')
     
     // Check competitor performance in this topic
     const competitorPerformance = {}
@@ -268,6 +271,9 @@ export function analyzeContentGaps(results, brandName, competitors) {
  * Generate optimization recommendations
  */
 export function generateRecommendations(results, gaps, sources, brand) {
+  // Helper to get mention type
+  const getMentionType = (r) => r.mention_type || r.brand_mention || r.brandMention || 'notMentioned'
+  
   const recommendations = []
   
   // Source-based recommendations
@@ -276,21 +282,24 @@ export function generateRecommendations(results, gaps, sources, brand) {
   
   results.forEach(r => {
     // Track sources when brand is NOT mentioned
-    if (r.brand_mention === 'notMentioned' && r.sources) {
-      r.sources.forEach(src => {
-        sourceCounts[src.name] = (sourceCounts[src.name] || 0) + 1
+    const mentionType = getMentionType(r)
+    const resultSources = r.sources || r.citations || []
+    
+    if (mentionType === 'notMentioned' && resultSources.length > 0) {
+      resultSources.forEach(src => {
+        const srcName = typeof src === 'string' ? src : (src.name || src.url || 'unknown')
+        sourceCounts[srcName] = (sourceCounts[srcName] || 0) + 1
         
         // Track which competitors are mentioned from this source
-        if (r.competitor_mentions) {
-          Object.entries(r.competitor_mentions).forEach(([comp, status]) => {
-            if (status !== 'notMentioned') {
-              if (!competitorSources[src.name]) {
-                competitorSources[src.name] = {}
-              }
-              competitorSources[src.name][comp] = (competitorSources[src.name][comp] || 0) + 1
+        const compMentions = r.competitor_mentions || r.competitorMentions || {}
+        Object.entries(compMentions).forEach(([comp, status]) => {
+          if (status !== 'notMentioned') {
+            if (!competitorSources[srcName]) {
+              competitorSources[srcName] = {}
             }
-          })
-        }
+            competitorSources[srcName][comp] = (competitorSources[srcName][comp] || 0) + 1
+          }
+        })
       })
     }
   })
@@ -340,7 +349,7 @@ export function generateRecommendations(results, gaps, sources, brand) {
   
   // Prompt-based recommendations
   const lowMentionPrompts = results
-    .filter(r => r.brand_mention === 'notMentioned')
+    .filter(r => getMentionType(r) === 'notMentioned')
     .slice(0, 10)
   
   const promptPatterns = {}
@@ -430,37 +439,39 @@ export function calculateContentScore(results, brand) {
     competitive: 0
   }
   
-  if (results.length === 0) return { overall: 0, breakdown: scores }
+  if (results.length === 0) return { overall: 0, breakdown: scores, grade: 'F', improvements: [], strengths: [] }
+  
+  // Helper to get mention type from any field
+  const getMentionType = (r) => r.mention_type || r.brand_mention || r.brandMention || 'notMentioned'
   
   // Visibility: % of queries where brand is mentioned
-  const mentioned = results.filter(r => r.brand_mention !== 'notMentioned')
+  const mentioned = results.filter(r => getMentionType(r) !== 'notMentioned')
   scores.visibility = Math.round((mentioned.length / results.length) * 100)
   
   // Authority: weighted by mention type
   const mentionWeights = { leader: 100, recommended: 75, mentioned: 50, alternative: 25, notMentioned: 0 }
-  const authoritySum = results.reduce((sum, r) => sum + (mentionWeights[r.brand_mention] || 0), 0)
+  const authoritySum = results.reduce((sum, r) => sum + (mentionWeights[getMentionType(r)] || 0), 0)
   scores.authority = Math.round(authoritySum / results.length)
   
   // Sentiment
   const sentimentScores = { positive: 100, neutral: 50, negative: 0 }
-  const sentimentSum = results
-    .filter(r => r.brand_mention !== 'notMentioned')
-    .reduce((sum, r) => sum + (sentimentScores[r.sentiment] || 50), 0)
+  const sentimentSum = mentioned.reduce((sum, r) => sum + (sentimentScores[r.sentiment] || 50), 0)
   scores.sentiment = mentioned.length > 0 ? Math.round(sentimentSum / mentioned.length) : 50
   
   // Coverage: how many different topics/intents we're mentioned in
-  const topics = [...new Set(results.map(r => r.topic_name || r.query_type))]
-  const coveredTopics = [...new Set(mentioned.map(r => r.topic_name || r.query_type))]
+  const topics = [...new Set(results.map(r => r.topic || r.topic_name || r.query_type || 'General'))]
+  const coveredTopics = [...new Set(mentioned.map(r => r.topic || r.topic_name || r.query_type || 'General'))]
   scores.coverage = topics.length > 0 ? Math.round((coveredTopics.length / topics.length) * 100) : 0
   
   // Competitive: how often we beat competitors
   let wins = 0, losses = 0
   results.forEach(r => {
-    if (r.competitor_mentions) {
-      const brandIsLeader = r.brand_mention === 'leader'
-      const brandIsMentioned = r.brand_mention !== 'notMentioned'
+    const compMentions = r.competitor_mentions || r.competitorMentions || {}
+    if (Object.keys(compMentions).length > 0) {
+      const brandIsLeader = getMentionType(r) === 'leader'
+      const brandIsMentioned = getMentionType(r) !== 'notMentioned'
       
-      Object.values(r.competitor_mentions).forEach(status => {
+      Object.values(compMentions).forEach(status => {
         if (brandIsLeader && status !== 'leader') wins++
         if (!brandIsMentioned && status === 'leader') losses++
         if (brandIsMentioned && status === 'notMentioned') wins++
@@ -479,10 +490,54 @@ export function calculateContentScore(results, brand) {
     scores.competitive * 0.15
   )
   
+  // Generate strengths and improvements based on scores
+  const strengths = []
+  const improvements = []
+  
+  if (scores.visibility >= 70) {
+    strengths.push(`Strong visibility: Brand mentioned in ${scores.visibility}% of AI responses`)
+  } else if (scores.visibility < 50) {
+    improvements.push(`Increase visibility: Currently only ${scores.visibility}% mention rate`)
+  }
+  
+  if (scores.authority >= 60) {
+    strengths.push(`Good authority score: AI recommends you favorably ${scores.authority}% of the time`)
+  } else if (scores.authority < 40) {
+    improvements.push(`Build authority: Focus on getting "top pick" recommendations`)
+  }
+  
+  if (scores.sentiment >= 70) {
+    strengths.push(`Positive sentiment: AI describes your brand positively`)
+  } else if (scores.sentiment < 50) {
+    improvements.push(`Improve sentiment: Work on brand perception and testimonials`)
+  }
+  
+  if (scores.coverage >= 80) {
+    strengths.push(`Excellent topic coverage: Mentioned across most topics`)
+  } else if (scores.coverage < 60) {
+    improvements.push(`Expand coverage: Create content for more topic areas`)
+  }
+  
+  if (scores.competitive >= 60) {
+    strengths.push(`Competitive edge: Outperforming competitors in AI recommendations`)
+  } else if (scores.competitive < 40) {
+    improvements.push(`Competitive gap: Competitors are being recommended more often`)
+  }
+  
+  // Add generic tips if lists are short
+  if (strengths.length === 0) {
+    strengths.push('Keep creating quality content to improve your AI presence')
+  }
+  if (improvements.length === 0) {
+    improvements.push('Continue monitoring and optimizing your AI visibility')
+  }
+  
   return {
     overall,
     breakdown: scores,
-    grade: overall >= 80 ? 'A' : overall >= 60 ? 'B' : overall >= 40 ? 'C' : overall >= 20 ? 'D' : 'F'
+    grade: overall >= 80 ? 'A' : overall >= 60 ? 'B' : overall >= 40 ? 'C' : overall >= 20 ? 'D' : 'F',
+    strengths,
+    improvements
   }
 }
 
@@ -490,11 +545,14 @@ export function calculateContentScore(results, brand) {
  * Calculate ROI metrics
  */
 export function calculateROI(results, analyticsData = null) {
+  // Helper to get mention type
+  const getMentionType = (r) => r.mention_type || r.brand_mention || r.brandMention || 'notMentioned'
+  
   const metrics = {
     mentions: {
       total: results.length,
-      positive: results.filter(r => r.brand_mention === 'leader' || r.brand_mention === 'recommended').length,
-      topPicks: results.filter(r => r.brand_mention === 'leader').length
+      positive: results.filter(r => getMentionType(r) === 'leader' || getMentionType(r) === 'recommended').length,
+      topPicks: results.filter(r => getMentionType(r) === 'leader').length
     },
     trend: {
       current: 0,
@@ -520,10 +578,10 @@ export function calculateROI(results, analyticsData = null) {
   })
   
   const recentMentionRate = recentResults.length > 0
-    ? recentResults.filter(r => r.brand_mention !== 'notMentioned').length / recentResults.length
+    ? recentResults.filter(r => getMentionType(r) !== 'notMentioned').length / recentResults.length
     : 0
   const previousMentionRate = previousResults.length > 0
-    ? previousResults.filter(r => r.brand_mention !== 'notMentioned').length / previousResults.length
+    ? previousResults.filter(r => getMentionType(r) !== 'notMentioned').length / previousResults.length
     : 0
   
   metrics.trend.current = Math.round(recentMentionRate * 100)

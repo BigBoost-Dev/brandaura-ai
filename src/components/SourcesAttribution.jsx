@@ -18,6 +18,21 @@ const SOURCE_TYPES = {
   other: { color: '#6b7280', label: 'Other' }
 }
 
+// Categorize source by domain
+function categorizeSource(domain) {
+  const reviewSites = ['g2.com', 'capterra.com', 'trustpilot.com', 'yelp.com', 'tripadvisor.com', 'glassdoor.com', 'trustradius.com', 'softwareadvice.com']
+  const newsSites = ['techcrunch.com', 'forbes.com', 'bloomberg.com', 'reuters.com', 'cnn.com', 'bbc.com', 'nytimes.com', 'wsj.com', 'theverge.com', 'wired.com', 'venturebeat.com']
+  const socialSites = ['twitter.com', 'x.com', 'linkedin.com', 'facebook.com', 'reddit.com', 'youtube.com', 'instagram.com', 'tiktok.com']
+  const blogSites = ['medium.com', 'substack.com', 'dev.to', 'hashnode.com', 'wordpress.com', 'blogger.com']
+  
+  if (reviewSites.some(s => domain.includes(s))) return 'review'
+  if (newsSites.some(s => domain.includes(s))) return 'news'
+  if (socialSites.some(s => domain.includes(s))) return 'social'
+  if (blogSites.some(s => domain.includes(s))) return 'blog'
+  if (domain.includes('.gov') || domain.includes('.edu')) return 'official'
+  return 'other'
+}
+
 function Card({ children, className = '' }) {
   return <div className={`rounded-2xl bg-white/[0.02] border border-white/[0.06] p-6 ${className}`}>{children}</div>
 }
@@ -32,18 +47,51 @@ export default function SourcesAttribution({ results = [], brand }) {
     const byType = {}
     
     results.forEach(r => {
-      if (r.citations && r.citations.length > 0) {
-        r.citations.forEach(cite => {
-          const domain = cite.url ? new URL(cite.url).hostname.replace('www.', '') : 'unknown'
-          const type = cite.type || 'other'
-          
-          if (!sources[domain]) {
-            sources[domain] = { domain, count: 0, type, urls: new Set() }
+      // Check multiple possible field names for sources
+      const citedSources = r.sources || r.citations || []
+      const citedUrls = r.cited_urls || r.citedUrls || []
+      
+      // Process structured sources
+      if (Array.isArray(citedSources) && citedSources.length > 0) {
+        citedSources.forEach(cite => {
+          try {
+            const url = typeof cite === 'string' ? cite : (cite.url || cite.link)
+            if (!url) return
+            
+            const domain = new URL(url).hostname.replace('www.', '')
+            const type = (typeof cite === 'object' ? cite.type : null) || categorizeSource(domain)
+            
+            if (!sources[domain]) {
+              sources[domain] = { domain, count: 0, type, urls: new Set() }
+            }
+            sources[domain].count++
+            sources[domain].urls.add(url)
+            
+            byType[type] = (byType[type] || 0) + 1
+          } catch (e) {
+            // Invalid URL, skip
           }
-          sources[domain].count++
-          if (cite.url) sources[domain].urls.add(cite.url)
-          
-          byType[type] = (byType[type] || 0) + 1
+        })
+      }
+      
+      // Process cited_urls array
+      if (Array.isArray(citedUrls) && citedUrls.length > 0) {
+        citedUrls.forEach(url => {
+          try {
+            if (!url || typeof url !== 'string') return
+            const domain = new URL(url).hostname.replace('www.', '')
+            const type = categorizeSource(domain)
+            
+            if (!sources[domain]) {
+              sources[domain] = { domain, count: 0, type, urls: new Set() }
+            }
+            sources[domain].count++
+            sources[domain].urls.add(url)
+            
+            byType[type] = (byType[type] || 0) + 1
+          } catch (e) {
+            // Invalid URL, skip
+          }
         })
       }
     })

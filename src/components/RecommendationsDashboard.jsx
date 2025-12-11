@@ -43,6 +43,7 @@ export default function RecommendationsDashboard({ results = [], brand, competit
     const total = results.length
     const mentioned = results.filter(r => r.mention_type && r.mention_type !== 'notMentioned').length
     const leaders = results.filter(r => r.mention_type === 'leader').length
+    const recommended = results.filter(r => r.mention_type === 'recommended').length
     const visibilityRate = Math.round((mentioned / total) * 100)
     const leaderRate = Math.round((leaders / total) * 100)
 
@@ -56,16 +57,49 @@ export default function RecommendationsDashboard({ results = [], brand, competit
         category: 'optimization',
         actions: ['Create comprehensive FAQ pages', 'Publish comparison guides', 'Build authoritative backlinks']
       })
+    } else if (visibilityRate >= 80) {
+      recs.push({
+        id: 'vis-good',
+        title: 'Strong Visibility Performance',
+        description: `Excellent! Your brand appears in ${visibilityRate}% of AI responses. Focus on converting mentions to recommendations.`,
+        priority: 'low',
+        category: 'optimization',
+        actions: ['Highlight key differentiators', 'Add more customer testimonials', 'Create comparison content']
+      })
     }
 
-    if (leaderRate < 20) {
+    if (leaderRate < 20 && visibilityRate > 50) {
       recs.push({
         id: 2,
         title: 'Increase Leader Recommendations',
-        description: `AI recommends you as the top choice only ${leaderRate}% of the time. Strengthen your market positioning.`,
+        description: `AI recommends you as the top choice only ${leaderRate}% of the time, but mentions you ${visibilityRate}% of the time. Convert mentions to recommendations.`,
         priority: 'high',
         category: 'content',
-        actions: ['Highlight unique differentiators', 'Collect and showcase testimonials', 'Create case studies']
+        actions: ['Highlight unique differentiators', 'Collect and showcase testimonials', 'Create case studies', 'Emphasize awards and recognition']
+      })
+    }
+
+    // Topic-specific insights
+    const topicCoverage = {}
+    results.forEach(r => {
+      const topic = r.topic || r.topic_name || 'General'
+      if (!topicCoverage[topic]) topicCoverage[topic] = { total: 0, mentioned: 0 }
+      topicCoverage[topic].total++
+      if (r.mention_type && r.mention_type !== 'notMentioned') topicCoverage[topic].mentioned++
+    })
+
+    const weakTopics = Object.entries(topicCoverage)
+      .filter(([_, data]) => (data.mentioned / data.total) < 0.5 && data.total >= 3)
+      .map(([topic, data]) => ({ topic, rate: Math.round((data.mentioned / data.total) * 100) }))
+    
+    if (weakTopics.length > 0) {
+      recs.push({
+        id: 'topic-weak',
+        title: `Improve Coverage in ${weakTopics.length} Topic${weakTopics.length > 1 ? 's' : ''}`,
+        description: `Low visibility in: ${weakTopics.slice(0, 3).map(t => `${t.topic} (${t.rate}%)`).join(', ')}`,
+        priority: 'medium',
+        category: 'content',
+        actions: weakTopics.slice(0, 3).map(t => `Create content targeting "${t.topic}" queries`)
       })
     }
 
@@ -75,27 +109,58 @@ export default function RecommendationsDashboard({ results = [], brand, competit
       const platformId = r.platform || r.platform_id || 'unknown'
       const platformName = getPlatformName(r)
       if (!platformCoverage[platformId]) {
-        platformCoverage[platformId] = { total: 0, mentioned: 0, name: platformName }
+        platformCoverage[platformId] = { total: 0, mentioned: 0, leaders: 0, name: platformName }
       }
       platformCoverage[platformId].total++
-      if (r.mention_type && r.mention_type !== 'notMentioned') platformCoverage[platformId].mentioned++
-    })
-
-    Object.entries(platformCoverage).forEach(([platformId, data]) => {
-      const rate = Math.round((data.mentioned / data.total) * 100)
-      if (rate < 30) {
-        recs.push({
-          id: `platform-${platformId}`,
-          title: `Improve ${data.name} Visibility`,
-          description: `Low visibility on ${data.name} (${rate}%). This platform may need specific optimization.`,
-          priority: 'medium',
-          category: 'optimization',
-          actions: ['Research platform-specific ranking factors', 'Optimize content for this AI model']
-        })
+      if (r.mention_type && r.mention_type !== 'notMentioned') {
+        platformCoverage[platformId].mentioned++
+        if (r.mention_type === 'leader') platformCoverage[platformId].leaders++
       }
     })
 
-    // Generic recommendations
+    // Find best and worst performing platforms
+    const platformStats = Object.entries(platformCoverage)
+      .map(([id, data]) => ({ id, ...data, rate: Math.round((data.mentioned / data.total) * 100) }))
+      .sort((a, b) => b.rate - a.rate)
+
+    if (platformStats.length > 1) {
+      const best = platformStats[0]
+      const worst = platformStats[platformStats.length - 1]
+      
+      if (best.rate - worst.rate > 30) {
+        recs.push({
+          id: 'platform-gap',
+          title: `Platform Performance Gap`,
+          description: `${best.name} shows ${best.rate}% visibility while ${worst.name} shows only ${worst.rate}%. Investigate why ${worst.name} isn't recommending you.`,
+          priority: 'medium',
+          category: 'optimization',
+          actions: [`Research ${worst.name}'s ranking factors`, `Compare your content to what ${worst.name} recommends`, 'Create platform-specific content']
+        })
+      }
+    }
+
+    // Competitor insights
+    let compWins = 0, compLosses = 0
+    results.forEach(r => {
+      const compMentions = r.competitor_mentions || r.competitorMentions || {}
+      Object.values(compMentions).forEach(status => {
+        if (r.mention_type === 'leader' && status !== 'leader') compWins++
+        if (r.mention_type === 'notMentioned' && status !== 'notMentioned') compLosses++
+      })
+    })
+
+    if (compLosses > compWins && compLosses > 5) {
+      recs.push({
+        id: 'comp-losing',
+        title: 'Competitors Outranking You',
+        description: `Competitors are being recommended over you in many queries. Analyze what makes them stand out.`,
+        priority: 'high',
+        category: 'optimization',
+        actions: ['Analyze competitor positioning', 'Identify gaps in your content', 'Strengthen unique value propositions']
+      })
+    }
+
+    // Always add sentiment monitoring
     recs.push({
       id: 'generic-1',
       title: 'Monitor Brand Sentiment',

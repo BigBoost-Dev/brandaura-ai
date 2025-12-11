@@ -155,12 +155,16 @@ export default function ContentScoreDashboard({ results = [], brand, competitors
             <h3 className="text-[14px] font-medium text-white">What's Working</h3>
           </div>
           <ul className="space-y-2">
-            {score?.strengths?.slice(0, 5).map((s, i) => (
-              <li key={i} className="text-[13px] text-white/60 flex items-start gap-2">
-                <span className="text-emerald-400 mt-0.5">•</span>
-                {s}
-              </li>
-            ))}
+            {(score?.strengths || []).length > 0 ? (
+              score.strengths.slice(0, 5).map((s, i) => (
+                <li key={i} className="text-[13px] text-white/60 flex items-start gap-2">
+                  <span className="text-emerald-400 mt-0.5">•</span>
+                  {s}
+                </li>
+              ))
+            ) : (
+              <li className="text-[13px] text-white/40 italic">Run more tests to identify strengths</li>
+            )}
           </ul>
         </Card>
 
@@ -170,12 +174,16 @@ export default function ContentScoreDashboard({ results = [], brand, competitors
             <h3 className="text-[14px] font-medium text-white">Needs Improvement</h3>
           </div>
           <ul className="space-y-2">
-            {score?.improvements?.slice(0, 5).map((s, i) => (
-              <li key={i} className="text-[13px] text-white/60 flex items-start gap-2">
-                <span className="text-amber-400 mt-0.5">•</span>
-                {s}
-              </li>
-            ))}
+            {(score?.improvements || []).length > 0 ? (
+              score.improvements.slice(0, 5).map((s, i) => (
+                <li key={i} className="text-[13px] text-white/60 flex items-start gap-2">
+                  <span className="text-amber-400 mt-0.5">•</span>
+                  {s}
+                </li>
+              ))
+            ) : (
+              <li className="text-[13px] text-white/40 italic">Run more tests to identify improvements</li>
+            )}
           </ul>
         </Card>
       </div>
