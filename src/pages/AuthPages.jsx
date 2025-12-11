@@ -8,10 +8,10 @@ import { initRecaptcha, executeRecaptcha } from '../lib/recaptcha'
 function Logo({ size = 32 }) {
   return (
     <div 
-      className="rounded-xl bg-gradient-to-br from-amber-400 via-amber-500 to-orange-500 flex items-center justify-center shadow-lg shadow-amber-500/20"
+      className="rounded-[10px] bg-gradient-to-br from-amber-400 via-amber-500 to-orange-600 flex items-center justify-center shadow-lg shadow-amber-500/25"
       style={{ width: size, height: size }}
     >
-      <span className="text-black font-semibold" style={{ fontSize: size * 0.5 }}>B</span>
+      <span style={{ fontFamily: 'Sora, sans-serif', fontSize: size * 0.58 }} className="text-black font-extrabold">B</span>
     </div>
   )
 }
@@ -171,8 +171,8 @@ export function LoginPage() {
       
       <header className="relative z-10 p-6 flex items-center justify-between">
         <Link to="/" className="inline-flex items-center gap-3">
-          <Logo size={28} />
-          <div><span className="font-semibold text-[15px] tracking-tight text-white block leading-none">BigRank AI</span><span className="text-[9px] text-white/30">by BigBoost</span></div>
+          <Logo size={38} />
+          <div className="flex flex-col gap-1"><span style={{ fontFamily: 'Sora, sans-serif' }} className="font-bold text-[17px] tracking-tight text-white block leading-none">BigRank AI</span><span style={{ fontFamily: 'Sora, sans-serif' }} className="text-[9px] text-white/30 font-medium">by BigBoost</span></div>
         </Link>
         <Link to="/signup" className="text-[14px] text-white/50 hover:text-white transition-colors">
           Create account
@@ -355,8 +355,8 @@ export function SignupPage() {
         
         <header className="relative z-10 p-6">
           <Link to="/" className="inline-flex items-center gap-3">
-            <Logo size={28} />
-            <div><span className="font-semibold text-[15px] tracking-tight text-white block leading-none">BigRank AI</span><span className="text-[9px] text-white/30">by BigBoost</span></div>
+            <Logo size={38} />
+            <div className="flex flex-col gap-1"><span style={{ fontFamily: 'Sora, sans-serif' }} className="font-bold text-[17px] tracking-tight text-white block leading-none">BigRank AI</span><span style={{ fontFamily: 'Sora, sans-serif' }} className="text-[9px] text-white/30 font-medium">by BigBoost</span></div>
           </Link>
         </header>
 
@@ -391,8 +391,8 @@ export function SignupPage() {
       
       <header className="relative z-10 p-6 flex items-center justify-between">
         <Link to="/" className="inline-flex items-center gap-3">
-          <Logo size={28} />
-          <div><span className="font-semibold text-[15px] tracking-tight text-white block leading-none">BigRank AI</span><span className="text-[9px] text-white/30">by BigBoost</span></div>
+          <Logo size={38} />
+          <div className="flex flex-col gap-1"><span style={{ fontFamily: 'Sora, sans-serif' }} className="font-bold text-[17px] tracking-tight text-white block leading-none">BigRank AI</span><span style={{ fontFamily: 'Sora, sans-serif' }} className="text-[9px] text-white/30 font-medium">by BigBoost</span></div>
         </Link>
         <Link to="/login" className="text-[14px] text-white/50 hover:text-white transition-colors">
           Sign In

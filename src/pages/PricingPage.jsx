@@ -7,10 +7,10 @@ import { PRICING_PLANS } from '../lib/constants'
 function Logo({ size = 32 }) {
   return (
     <div 
-      className="rounded-lg bg-gradient-to-br from-amber-400 via-amber-500 to-orange-500 flex items-center justify-center shadow-lg shadow-amber-500/20"
+      className="rounded-[10px] bg-gradient-to-br from-amber-400 via-amber-500 to-orange-600 flex items-center justify-center shadow-lg shadow-amber-500/25"
       style={{ width: size, height: size }}
     >
-      <span className="text-black font-semibold" style={{ fontSize: size * 0.5 }}>B</span>
+      <span style={{ fontFamily: 'Sora, sans-serif', fontSize: size * 0.58 }} className="text-black font-extrabold">B</span>
     </div>
   )
 }
@@ -34,11 +34,11 @@ export default function PricingPage() {
       {/* Navigation */}
       <nav className="fixed top-0 left-0 right-0 z-50 px-6 lg:px-8 py-4">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <Link to="/" className="flex items-center gap-3">
-            <Logo size={32} />
-            <div>
-              <span className="text-[17px] font-semibold tracking-tight text-white block leading-none">BigRank AI</span>
-              <span className="text-[9px] text-white/30">by BigBoost</span>
+          <Link to="/" className="flex items-center gap-3.5">
+            <Logo size={38} />
+            <div className="flex flex-col gap-1">
+              <span style={{ fontFamily: 'Sora, sans-serif' }} className="text-[17px] font-bold tracking-tight text-white block leading-none">BigRank AI</span>
+              <span style={{ fontFamily: 'Sora, sans-serif' }} className="text-[9px] text-white/30 font-medium">by BigBoost</span>
             </div>
           </Link>
           <div className="flex items-center gap-4">
@@ -255,10 +255,10 @@ export default function PricingPage() {
       <footer className="py-8 px-6 border-t border-white/[0.03]">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <Logo size={24} />
-            <div>
-              <span className="font-medium text-[14px] text-white/70 block leading-none">BigRank AI</span>
-              <span className="text-[9px] text-white/30">by BigBoost</span>
+            <Logo size={28} />
+            <div className="flex flex-col gap-0.5">
+              <span style={{ fontFamily: 'Sora, sans-serif' }} className="font-semibold text-[14px] text-white/70 block leading-none">BigRank AI</span>
+              <span style={{ fontFamily: 'Sora, sans-serif' }} className="text-[9px] text-white/30 font-medium">by BigBoost</span>
             </div>
           </div>
           <div className="text-white/30 text-[13px]">© 2025 BigRank AI. All rights reserved.</div>
