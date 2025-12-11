@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react'
+import { AI_SEARCH_ENGINES, AI_PLATFORMS } from '../lib/constants'
 
 const Icons = {
   lightbulb: <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M9 18h6m-5 4h4M12 2a7 7 0 00-4 12.73V17a1 1 0 001 1h6a1 1 0 001-1v-2.27A7 7 0 0012 2z" strokeLinecap="round" strokeLinejoin="round"/></svg>,
@@ -6,6 +7,12 @@ const Icons = {
   star: <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" strokeLinecap="round" strokeLinejoin="round"/></svg>,
   target: <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>,
   arrowRight: <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14m-7-7l7 7-7 7" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+}
+
+// Helper to get platform display name
+const getPlatformName = (r) => {
+  const platformId = r.platform || r.platform_id || 'unknown'
+  return r.platform_name || AI_SEARCH_ENGINES[platformId]?.name || AI_PLATFORMS[platformId]?.name || platformId
 }
 
 const PRIORITY_STYLES = {
@@ -65,18 +72,22 @@ export default function RecommendationsDashboard({ results = [], brand, competit
     // Platform-specific recommendations
     const platformCoverage = {}
     results.forEach(r => {
-      if (!platformCoverage[r.platform]) platformCoverage[r.platform] = { total: 0, mentioned: 0 }
-      platformCoverage[r.platform].total++
-      if (r.mention_type && r.mention_type !== 'notMentioned') platformCoverage[r.platform].mentioned++
+      const platformId = r.platform || r.platform_id || 'unknown'
+      const platformName = getPlatformName(r)
+      if (!platformCoverage[platformId]) {
+        platformCoverage[platformId] = { total: 0, mentioned: 0, name: platformName }
+      }
+      platformCoverage[platformId].total++
+      if (r.mention_type && r.mention_type !== 'notMentioned') platformCoverage[platformId].mentioned++
     })
 
-    Object.entries(platformCoverage).forEach(([platform, data]) => {
+    Object.entries(platformCoverage).forEach(([platformId, data]) => {
       const rate = Math.round((data.mentioned / data.total) * 100)
       if (rate < 30) {
         recs.push({
-          id: `platform-${platform}`,
-          title: `Improve ${platform} Visibility`,
-          description: `Low visibility on ${platform} (${rate}%). This platform may need specific optimization.`,
+          id: `platform-${platformId}`,
+          title: `Improve ${data.name} Visibility`,
+          description: `Low visibility on ${data.name} (${rate}%). This platform may need specific optimization.`,
           priority: 'medium',
           category: 'optimization',
           actions: ['Research platform-specific ranking factors', 'Optimize content for this AI model']

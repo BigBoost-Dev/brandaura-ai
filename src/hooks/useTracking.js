@@ -45,6 +45,17 @@ export function useTracking() {
     const prompts = settings.prompts || []
     const engines = settings.engines || ['chatgpt-auto', 'perplexity', 'gemini']
     const topics = settings.topics || []
+    
+    console.log('[Tracking] Settings loaded:', {
+      promptsCount: prompts.length,
+      enginesCount: engines.length,
+      topicsCount: topics.length,
+      samplePrompt: prompts[0] ? { 
+        text: prompts[0].text?.substring(0, 30), 
+        topicId: prompts[0].topicId,
+        topicName: prompts[0].topicName 
+      } : null
+    })
 
     if (prompts.length === 0) {
       addLog('❌ No prompts configured. Use Topic Wizard to set up tracking.', 'error')
@@ -132,20 +143,29 @@ export function useTracking() {
                 brand_id: brand.id,
                 user_id: userId,
                 batch_id: batchId,
+                // Platform fields - dashboards use 'platform' and 'platform_name'
+                platform: engineId,
                 platform_id: engineId,
                 platform_name: engine.name,
                 model: engine.model,
+                // Query fields
                 query: prompt.text,
                 query_type: prompt.type || 'general',
+                // Topic fields - dashboards use 'topic' and 'topic_name'
+                topic: prompt.topicName || topic.name || 'General',
                 topic_id: prompt.topicId || null,
                 topic_name: prompt.topicName || topic.name || 'General',
+                funnel_stage: prompt.topicName || topic.name || 'General',
+                // Response and analysis
                 response_text: response,
                 full_response: response,
                 brand_mentioned: analysis.brandMention !== 'notMentioned',
                 mention_type: analysis.brandMention,
+                brand_mention: analysis.brandMention, // Some dashboards use this
                 brand_position: analysis.brandPosition,
                 mention_count: analysis.mentionCount,
                 sentiment: analysis.sentiment,
+                confidence: analysis.confidence,
                 confidence_score: analysis.confidence,
                 competitor_mentions: analysis.competitorMentions || {},
                 cited_urls: analysis.citedUrls || [],

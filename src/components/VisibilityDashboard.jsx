@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react'
 import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip, BarChart, Bar, Cell } from 'recharts'
-import { FUNNEL_STAGES, AI_PLATFORMS } from '../lib/constants'
+import { FUNNEL_STAGES, AI_PLATFORMS, AI_SEARCH_ENGINES } from '../lib/constants'
 
 const Icons = {
   chart: <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M18 20V10M12 20V4M6 20v-6" strokeLinecap="round" strokeLinejoin="round"/></svg>,
@@ -48,14 +48,24 @@ export default function VisibilityDashboard({ results = [], brand, competitors =
     const visibilityScore = total > 0 ? Math.round((mentioned / total) * 100) : 0
     const leaderRate = total > 0 ? Math.round((leaders / total) * 100) : 0
     
-    // By platform
+    // By platform - use platform_name for display
     const byPlatform = {}
     filtered.forEach(r => {
-      if (!byPlatform[r.platform]) byPlatform[r.platform] = { total: 0, mentioned: 0, leader: 0 }
-      byPlatform[r.platform].total++
+      const platformId = r.platform || r.platform_id || 'unknown'
+      const platformName = r.platform_name || AI_SEARCH_ENGINES[platformId]?.name || AI_PLATFORMS[platformId]?.name || platformId
+      
+      if (!byPlatform[platformId]) {
+        byPlatform[platformId] = { 
+          total: 0, 
+          mentioned: 0, 
+          leader: 0,
+          name: platformName
+        }
+      }
+      byPlatform[platformId].total++
       if (r.mention_type && r.mention_type !== 'notMentioned') {
-        byPlatform[r.platform].mentioned++
-        if (r.mention_type === 'leader') byPlatform[r.platform].leader++
+        byPlatform[platformId].mentioned++
+        if (r.mention_type === 'leader') byPlatform[platformId].leader++
       }
     })
 
@@ -138,15 +148,15 @@ export default function VisibilityDashboard({ results = [], brand, competitors =
         <div className="space-y-3">
           {Object.entries(metrics.byPlatform).map(([platform, data]) => {
             const score = Math.round((data.mentioned / data.total) * 100)
-            const platformInfo = AI_PLATFORMS[platform] || { name: platform, color: '#f59e0b' }
+            const platformColor = AI_SEARCH_ENGINES[platform]?.color || AI_PLATFORMS[platform]?.color || '#f59e0b'
             return (
               <div key={platform} className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.04]">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-[14px] text-white">{platformInfo.name}</span>
-                  <span className="text-[14px] font-semibold font-mono" style={{ color: platformInfo.color }}>{score}%</span>
+                  <span className="text-[14px] text-white">{data.name || platform}</span>
+                  <span className="text-[14px] font-semibold font-mono" style={{ color: platformColor }}>{score}%</span>
                 </div>
                 <div className="h-1.5 bg-white/[0.04] rounded-full overflow-hidden">
-                  <div className="h-full rounded-full" style={{ width: `${score}%`, background: platformInfo.color }} />
+                  <div className="h-full rounded-full" style={{ width: `${score}%`, background: platformColor }} />
                 </div>
                 <div className="flex justify-between mt-2 text-[11px] text-white/30">
                   <span>{data.mentioned} mentions</span>

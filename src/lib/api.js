@@ -241,59 +241,82 @@ export function calculateMetrics(results, platforms, competitors = []) {
   if (!Array.isArray(platforms)) platforms = []
   if (!Array.isArray(competitors)) competitors = []
   
-  // Overall visibility score
-  const scores = results.map(r => MENTION_TYPES[r.brand_mention || r.mention_type || r.brandMention]?.score || 0)
-  const visibilityScore = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
+  // Helper to get mention type from any field
+  const getMentionType = (r) => r.mention_type || r.brand_mention || r.brandMention || 'notMentioned'
   
-  // By platform
+  // Simple percentage-based visibility (matches VisibilityDashboard)
+  const total = results.length
+  const mentioned = results.filter(r => {
+    const mt = getMentionType(r)
+    return mt && mt !== 'notMentioned'
+  }).length
+  const leaders = results.filter(r => getMentionType(r) === 'leader').length
+  const visibilityScore = total > 0 ? Math.round((mentioned / total) * 100) : 0
+  const leaderRate = total > 0 ? Math.round((leaders / total) * 100) : 0
+  
+  // By platform - check multiple field names
   const byPlatform = {}
-  platforms.forEach(pid => {
-    const platformResults = results.filter(r => r.platform_id === pid || r.platformId === pid)
-    if (platformResults.length > 0) {
-      const pScores = platformResults.map(r => MENTION_TYPES[r.brand_mention || r.mention_type || r.brandMention]?.score || 0)
-      byPlatform[pid] = {
-        score: Math.round(pScores.reduce((a, b) => a + b, 0) / pScores.length),
-        tests: platformResults.length,
-        leader: platformResults.filter(r => (r.brand_mention || r.mention_type || r.brandMention) === 'leader').length,
-        mentioned: platformResults.filter(r => (r.brand_mention || r.mention_type || r.brandMention) !== 'notMentioned').length
-      }
+  const getPlatform = (r) => r.platform || r.platform_id || r.platformId || 'unknown'
+  
+  results.forEach(r => {
+    const plat = getPlatform(r)
+    if (!byPlatform[plat]) byPlatform[plat] = { score: 0, tests: 0, leader: 0, mentioned: 0 }
+    byPlatform[plat].tests++
+    const mt = getMentionType(r)
+    if (mt && mt !== 'notMentioned') {
+      byPlatform[plat].mentioned++
+      if (mt === 'leader') byPlatform[plat].leader++
     }
   })
   
-  // By query type
+  // Calculate scores per platform
+  Object.keys(byPlatform).forEach(plat => {
+    const p = byPlatform[plat]
+    p.score = p.tests > 0 ? Math.round((p.mentioned / p.tests) * 100) : 0
+  })
+  
+  // By query type / funnel stage
   const byType = {}
-  const types = ['awareness', 'consideration', 'decision', 'reputation']
-  types.forEach(type => {
-    const typeResults = results.filter(r => (r.query_type || r.queryType) === type)
-    if (typeResults.length > 0) {
-      const tScores = typeResults.map(r => MENTION_TYPES[r.brand_mention || r.mention_type || r.brandMention]?.score || 0)
-      byType[type] = Math.round(tScores.reduce((a, b) => a + b, 0) / tScores.length)
-    }
+  const getType = (r) => r.topic || r.topic_name || r.query_type || r.funnel_stage || 'General'
+  
+  results.forEach(r => {
+    const type = getType(r)
+    if (!byType[type]) byType[type] = { total: 0, mentioned: 0 }
+    byType[type].total++
+    const mt = getMentionType(r)
+    if (mt && mt !== 'notMentioned') byType[type].mentioned++
+  })
+  
+  // Convert to percentages
+  Object.keys(byType).forEach(type => {
+    const t = byType[type]
+    byType[type] = t.total > 0 ? Math.round((t.mentioned / t.total) * 100) : 0
   })
   
   // Mention distribution
   const mentionDist = {}
   Object.keys(MENTION_TYPES).forEach(type => {
-    mentionDist[type] = results.filter(r => (r.brand_mention || r.mention_type || r.brandMention) === type).length
+    mentionDist[type] = results.filter(r => getMentionType(r) === type).length
   })
   
   // Competitor scores
   const competitorScores = {}
   competitors.forEach(comp => {
-    const compName = comp.name || comp
-    const compMentions = results
-      .filter(r => {
-        const mentions = r.competitor_mentions || r.competitorMentions || {}
-        return mentions[compName] && mentions[compName] !== 'notMentioned'
-      })
-      .map(r => {
-        const mentions = r.competitor_mentions || r.competitorMentions || {}
-        return MENTION_TYPES[mentions[compName]]?.score || 0
-      })
+    const compName = typeof comp === 'object' ? comp.name : comp
+    if (!compName) return
     
-    competitorScores[compName] = compMentions.length > 0
-      ? Math.round(compMentions.reduce((a, b) => a + b, 0) / compMentions.length)
-      : 0
+    let compMentioned = 0
+    let compTotal = 0
+    
+    results.forEach(r => {
+      const mentions = r.competitor_mentions || r.competitorMentions || {}
+      compTotal++
+      if (mentions[compName] && mentions[compName] !== 'notMentioned') {
+        compMentioned++
+      }
+    })
+    
+    competitorScores[compName] = compTotal > 0 ? Math.round((compMentioned / compTotal) * 100) : 0
   })
   
   // Timeline (last 30 days)
@@ -301,16 +324,18 @@ export function calculateMetrics(results, platforms, competitors = []) {
   results.forEach(r => {
     const day = (r.created_at || r.timestamp)?.slice(0, 10)
     if (day) {
-      if (!dailyData[day]) dailyData[day] = []
-      dailyData[day].push(MENTION_TYPES[r.brand_mention || r.mention_type || r.brandMention]?.score || 0)
+      if (!dailyData[day]) dailyData[day] = { total: 0, mentioned: 0 }
+      dailyData[day].total++
+      const mt = getMentionType(r)
+      if (mt && mt !== 'notMentioned') dailyData[day].mentioned++
     }
   })
   
   const timeline = Object.entries(dailyData)
-    .map(([date, dayScores]) => ({
+    .map(([date, data]) => ({
       date,
-      score: Math.round(dayScores.reduce((a, b) => a + b, 0) / dayScores.length),
-      tests: dayScores.length
+      score: data.total > 0 ? Math.round((data.mentioned / data.total) * 100) : 0,
+      tests: data.total
     }))
     .sort((a, b) => a.date.localeCompare(b.date))
     .slice(-30)
@@ -328,8 +353,17 @@ export function calculateMetrics(results, platforms, competitors = []) {
   
   let trend = 0
   if (thisWeek.length > 0 && lastWeek.length > 0) {
-    const thisAvg = thisWeek.map(r => MENTION_TYPES[r.brand_mention || r.brandMention]?.score || 0).reduce((a, b) => a + b, 0) / thisWeek.length
-    const lastAvg = lastWeek.map(r => MENTION_TYPES[r.brand_mention || r.brandMention]?.score || 0).reduce((a, b) => a + b, 0) / lastWeek.length
+    const thisWeekMentioned = thisWeek.filter(r => {
+      const mt = getMentionType(r)
+      return mt && mt !== 'notMentioned'
+    }).length
+    const lastWeekMentioned = lastWeek.filter(r => {
+      const mt = getMentionType(r)
+      return mt && mt !== 'notMentioned'
+    }).length
+    
+    const thisAvg = Math.round((thisWeekMentioned / thisWeek.length) * 100)
+    const lastAvg = Math.round((lastWeekMentioned / lastWeek.length) * 100)
     trend = thisAvg - lastAvg
   }
   
@@ -338,16 +372,17 @@ export function calculateMetrics(results, platforms, competitors = []) {
   
   return {
     visibilityScore,
-    totalTests: results.length,
+    leaderRate,
+    totalTests: total,
     byPlatform,
     byType,
     mentionDist,
     competitorScores,
     timeline,
     trend,
-    leaderCount: mentionDist.leader || 0,
-    mentionedCount: results.filter(r => (r.brand_mention || r.brandMention) !== 'notMentioned').length,
-    notMentionedCount: mentionDist.notMentioned || 0,
+    leaderCount: leaders,
+    mentionedCount: mentioned,
+    notMentionedCount: total - mentioned,
     totalCost
   }
 }

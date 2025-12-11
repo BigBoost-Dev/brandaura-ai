@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react'
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, Cell, LineChart, Line } from 'recharts'
-import { AI_PLATFORMS } from '../lib/constants'
+import { AI_PLATFORMS, AI_SEARCH_ENGINES } from '../lib/constants'
 
 const Icons = {
   search: <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35" strokeLinecap="round" strokeLinejoin="round"/></svg>,
@@ -20,26 +20,35 @@ export default function AISearchPerformance({ results = [], brand }) {
   const metrics = useMemo(() => {
     if (results.length === 0) return null
 
-    // By platform/engine
+    // By platform/engine - use platform_name for display name
     const byEngine = {}
     results.forEach(r => {
-      const engine = r.platform || 'unknown'
-      if (!byEngine[engine]) {
-        byEngine[engine] = { total: 0, mentioned: 0, leader: 0, queries: [] }
+      const engineId = r.platform || r.platform_id || 'unknown'
+      const engineName = r.platform_name || AI_SEARCH_ENGINES[engineId]?.name || AI_PLATFORMS[engineId]?.name || engineId
+      
+      if (!byEngine[engineId]) {
+        byEngine[engineId] = { 
+          total: 0, 
+          mentioned: 0, 
+          leader: 0, 
+          queries: [],
+          name: engineName,
+          color: AI_SEARCH_ENGINES[engineId]?.color || AI_PLATFORMS[engineId]?.color || '#f59e0b'
+        }
       }
-      byEngine[engine].total++
-      byEngine[engine].queries.push(r)
+      byEngine[engineId].total++
+      byEngine[engineId].queries.push(r)
       if (r.mention_type && r.mention_type !== 'notMentioned') {
-        byEngine[engine].mentioned++
-        if (r.mention_type === 'leader') byEngine[engine].leader++
+        byEngine[engineId].mentioned++
+        if (r.mention_type === 'leader') byEngine[engineId].leader++
       }
     })
 
     const engineStats = Object.entries(byEngine)
       .map(([engine, data]) => ({
         engine,
-        name: AI_PLATFORMS[engine]?.name || engine,
-        color: AI_PLATFORMS[engine]?.color || '#f59e0b',
+        name: data.name,
+        color: data.color,
         visibility: Math.round((data.mentioned / data.total) * 100),
         leaderRate: Math.round((data.leader / data.total) * 100),
         total: data.total,
@@ -210,21 +219,25 @@ export default function AISearchPerformance({ results = [], brand }) {
         <Card>
           <h3 className="text-[14px] font-medium text-white/60 mb-5">All Queries</h3>
           <div className="space-y-2 max-h-[500px] overflow-y-auto">
-            {results.slice(0, 50).map((r, i) => (
-              <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-white/[0.02]">
-                <div className="flex-1 min-w-0">
-                  <div className="text-[13px] text-white truncate">{r.query}</div>
-                  <div className="text-[11px] text-white/30">{AI_PLATFORMS[r.platform]?.name || r.platform}</div>
+            {results.slice(0, 50).map((r, i) => {
+              const platformId = r.platform || r.platform_id || 'unknown'
+              const platformName = r.platform_name || AI_SEARCH_ENGINES[platformId]?.name || AI_PLATFORMS[platformId]?.name || platformId
+              return (
+                <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-white/[0.02]">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[13px] text-white truncate">{r.query}</div>
+                    <div className="text-[11px] text-white/30">{platformName}</div>
+                  </div>
+                  <span className={`ml-3 px-2 py-1 rounded text-[11px] font-medium ${
+                    r.mention_type === 'leader' ? 'bg-emerald-500/10 text-emerald-400' :
+                    r.mention_type === 'mentioned' ? 'bg-amber-500/10 text-amber-400' :
+                    'bg-white/[0.05] text-white/40'
+                  }`}>
+                    {r.mention_type || 'Not found'}
+                  </span>
                 </div>
-                <span className={`ml-3 px-2 py-1 rounded text-[11px] font-medium ${
-                  r.mention_type === 'leader' ? 'bg-emerald-500/10 text-emerald-400' :
-                  r.mention_type === 'mentioned' ? 'bg-amber-500/10 text-amber-400' :
-                  'bg-white/[0.05] text-white/40'
-                }`}>
-                  {r.mention_type || 'Not found'}
-                </span>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </Card>
       )}

@@ -18,10 +18,10 @@ export default function TopicPerformance({ results = [], topics = [], brand, com
   const topicMetrics = useMemo(() => {
     if (results.length === 0) return []
 
-    // Group by topic/query category
+    // Group by topic/query category - check multiple field names
     const byTopic = {}
     results.forEach(r => {
-      const topic = r.topic || r.funnel_stage || 'General'
+      const topic = r.topic || r.topic_name || r.funnel_stage || 'General'
       if (!byTopic[topic]) {
         byTopic[topic] = { total: 0, mentioned: 0, leader: 0, queries: [] }
       }
