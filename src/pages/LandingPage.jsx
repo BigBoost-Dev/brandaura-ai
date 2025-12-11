@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import React, { useEffect, useState, useRef } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../hooks/useStore'
 import { motion } from 'framer-motion'
 import { Marquee } from '../components/magicui/marquee'
@@ -516,13 +516,35 @@ const itemVariants = {
 }
 
 export default function LandingPage() {
-  const { user, loading } = useAuthStore()
+  const { user, profile, loading, signOut } = useAuthStore()
+  const navigate = useNavigate()
   const [mounted, setMounted] = useState(false)
+  const [profileOpen, setProfileOpen] = useState(false)
+  const profileRef = useRef(null)
   const scrolled = useScrolled(10)
 
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (profileRef.current && !profileRef.current.contains(event.target)) {
+        setProfileOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  // Get user initials for avatar
+  const getInitials = () => {
+    const name = profile?.full_name || user?.user_metadata?.full_name || user?.email || ''
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '?'
+  }
+
+  const avatarUrl = profile?.avatar_url || user?.user_metadata?.avatar_url || user?.user_metadata?.picture || null
 
   return (
     <div className="min-h-screen bg-[#09090b] text-white antialiased">
@@ -573,13 +595,69 @@ export default function LandingPage() {
             {loading ? (
               <div className="w-24 h-10 bg-white/5 rounded-lg animate-pulse" />
             ) : user ? (
-              <Link 
-                to="/dashboard" 
-                className="relative inline-flex items-center justify-center px-5 py-2.5 rounded-lg font-medium text-[14px] text-black overflow-hidden bg-gradient-to-b from-amber-400 via-amber-500 to-orange-500 transition-all duration-300"
-              >
-                <span className="absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/25 to-transparent rounded-t-lg" />
-                <span className="relative">Dashboard</span>
-              </Link>
+              <div className="flex items-center gap-3">
+                <Link 
+                  to="/dashboard" 
+                  className="relative inline-flex items-center justify-center px-5 py-2.5 rounded-lg font-medium text-[14px] text-black overflow-hidden bg-gradient-to-b from-amber-400 via-amber-500 to-orange-500 transition-all duration-300"
+                >
+                  <span className="absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/25 to-transparent rounded-t-lg" />
+                  <span className="relative">Dashboard</span>
+                </Link>
+                
+                {/* Profile Dropdown */}
+                <div className="relative" ref={profileRef}>
+                  <button
+                    onClick={() => setProfileOpen(!profileOpen)}
+                    className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400/20 to-orange-500/20 flex items-center justify-center overflow-hidden border border-white/[0.08] hover:border-amber-500/30 transition-colors"
+                  >
+                    {avatarUrl ? (
+                      <img src={avatarUrl} alt="Profile" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-[13px] font-semibold text-amber-400">{getInitials()}</span>
+                    )}
+                  </button>
+                  
+                  {profileOpen && (
+                    <div className="absolute right-0 top-full mt-2 w-56 bg-[#141417] border border-white/[0.08] rounded-xl shadow-2xl shadow-black/50 overflow-hidden z-50">
+                      <div className="p-3 border-b border-white/[0.06]">
+                        <p className="text-[13px] font-medium text-white truncate">{profile?.full_name || user?.user_metadata?.full_name || 'User'}</p>
+                        <p className="text-[11px] text-white/40 truncate">{user?.email}</p>
+                      </div>
+                      <div className="p-1.5">
+                        <Link
+                          to="/profile"
+                          onClick={() => setProfileOpen(false)}
+                          className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] text-white/70 hover:text-white hover:bg-white/[0.05] transition-colors"
+                        >
+                          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                          Profile Settings
+                        </Link>
+                        <Link
+                          to="/dashboard"
+                          onClick={() => setProfileOpen(false)}
+                          className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] text-white/70 hover:text-white hover:bg-white/[0.05] transition-colors"
+                        >
+                          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                          Dashboard
+                        </Link>
+                      </div>
+                      <div className="p-1.5 border-t border-white/[0.06]">
+                        <button
+                          onClick={async () => {
+                            setProfileOpen(false)
+                            await signOut()
+                            navigate('/')
+                          }}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] text-red-400 hover:bg-red-500/10 transition-colors"
+                        >
+                          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16,17 21,12 16,7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                          Sign Out
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
             ) : (
               <>
                 <Link 

@@ -6,6 +6,7 @@ import { useAuthStore } from './hooks/useStore'
 import LandingPage from './pages/LandingPage'
 import { LoginPage, SignupPage } from './pages/AuthPages'
 import Dashboard from './pages/DashboardPage'
+import ProfilePage from './pages/ProfilePage'
 
 // Loading spinner
 function LoadingScreen() {
@@ -103,6 +104,15 @@ export default function App() {
         element={
           <ProtectedRoute>
             <Dashboard />
+          </ProtectedRoute>
+        } 
+      />
+      
+      <Route 
+        path="/profile" 
+        element={
+          <ProtectedRoute>
+            <ProfilePage />
           </ProtectedRoute>
         } 
       />
