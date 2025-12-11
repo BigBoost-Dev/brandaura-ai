@@ -117,12 +117,8 @@ export default function TopicTrackingWizard({ userId, onComplete, onCancel, edit
       console.error('Generate competitors error:', e) 
     }
     
-    // Fallback
-    setCompetitors([
-      { name: 'Competitor 1' }, 
-      { name: 'Competitor 2' },
-      { name: 'Competitor 3' }
-    ])
+    // Fallback - empty array so user can add manually
+    setCompetitors([])
     setGenerating(false)
   }
 
@@ -435,11 +431,7 @@ JSON only: [{"text":"prompt","type":"branded|unbranded|comparison","topic":"topi
                   </div>
                   <button 
                     onClick={() => {
-                      setCompetitors([
-                        { name: 'Competitor 1' }, 
-                        { name: 'Competitor 2' },
-                        { name: 'Competitor 3' }
-                      ])
+                      setCompetitors([])
                       setGenerating(false)
                     }}
                     className="mt-4 text-[13px] text-amber-400 hover:text-amber-300"
