@@ -90,15 +90,19 @@ export const db = {
         .select('*')
         .eq('id', userId)
         .single()
-      if (error) throw error
+      if (error && error.code !== 'PGRST116') throw error // PGRST116 = no rows
       return data
     },
 
     async update(userId, updates) {
+      // Use upsert to create profile if it doesn't exist
       const { data, error } = await supabase
         .from('profiles')
-        .update(updates)
-        .eq('id', userId)
+        .upsert({ 
+          id: userId, 
+          ...updates,
+          updated_at: new Date().toISOString()
+        })
         .select()
         .single()
       if (error) throw error
@@ -172,11 +176,23 @@ export const db = {
     },
 
     async delete(brandId) {
-      const { error } = await supabase
-        .from('brands')
-        .delete()
-        .eq('id', brandId)
-      if (error) throw error
+      console.log('[DB] Deleting brand:', brandId)
+      try {
+        const { error } = await supabase
+          .from('brands')
+          .delete()
+          .eq('id', brandId)
+        
+        if (error) {
+          console.error('[DB] Delete error:', error.message, error.code, error.details)
+          throw error
+        }
+        
+        console.log('[DB] Delete success')
+      } catch (err) {
+        console.error('[DB] Delete exception:', err)
+        throw err
+      }
     }
   },
 
