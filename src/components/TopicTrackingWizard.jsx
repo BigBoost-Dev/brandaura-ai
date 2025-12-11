@@ -90,85 +90,151 @@ export default function TopicTrackingWizard({ userId, onComplete, onCancel, edit
   }, [step, selectedTopics])
 
   const generateCompetitors = async () => {
+    console.log('[Wizard] Starting competitor generation for:', website)
     setGenerating(true)
     
     try {
       const session = await getAuthSession()
-      const result = await queryAI('openai/gpt-4o-mini', 
-        `List 5 competitors for ${website} in ${industry}. JSON only: [{"name":"Company Name"}]`,
-        session,
-        10000 // 10 second timeout
-      )
+      
+      if (!session) {
+        console.error('[Wizard] No auth session for competitors')
+        setCompetitors([])
+        setGenerating(false)
+        return
+      }
+      
+      const prompt = `List 5 main competitors for "${website}" in the ${industry} industry.
+Return ONLY a JSON array, no other text:
+[{"name":"Company Name"}]`
+
+      console.log('[Wizard] Calling AI for competitors...')
+      const result = await queryAI('openai/gpt-4o-mini', prompt, session, 20000)
+      
+      console.log('[Wizard] Competitors response:', result?.success, result?.response?.length || 0)
       
       if (result?.success && result?.response) {
-        const match = result.response.match(/\[[\s\S]*?\]/)
-        if (match) {
+        const jsonMatch = result.response.match(/\[[\s\S]*\]/)
+        if (jsonMatch) {
           try {
-            const parsed = JSON.parse(match[0])
+            const parsed = JSON.parse(jsonMatch[0])
             if (Array.isArray(parsed) && parsed.length > 0) {
-              setCompetitors(parsed.slice(0, 5))
-              setGenerating(false)
-              return
+              const validCompetitors = parsed
+                .filter(c => c.name && typeof c.name === 'string')
+                .slice(0, 5)
+              
+              if (validCompetitors.length > 0) {
+                console.log('[Wizard] Found', validCompetitors.length, 'competitors')
+                setCompetitors(validCompetitors)
+                setGenerating(false)
+                return
+              }
             }
-          } catch (e) {}
+          } catch (parseErr) {
+            console.error('[Wizard] Competitors parse error:', parseErr.message)
+          }
         }
       }
-    } catch (e) { 
-      console.error('Generate competitors error:', e) 
+    } catch (err) { 
+      console.error('[Wizard] Generate competitors error:', err.message) 
     }
     
     // Fallback - empty array so user can add manually
+    console.log('[Wizard] Using empty competitor list (add manually)')
     setCompetitors([])
     setGenerating(false)
   }
 
   const generatePrompts = async () => {
+    console.log('[Wizard] Starting prompt generation...')
     setGenerating(true)
+    
     const selectedTopicNames = topics.filter(t => selectedTopics.includes(t.id))
     const brand = brandName || website
     const compNames = competitors.map(c => c.name).slice(0, 3)
     
+    // If no topics selected, use fallback immediately
+    if (selectedTopicNames.length === 0) {
+      console.log('[Wizard] No topics selected, using fallback')
+      generateFallbackPrompts()
+      return
+    }
+    
     try {
+      console.log('[Wizard] Getting auth session...')
       const session = await getAuthSession()
-      const result = await queryAI('openai/gpt-4o-mini',
-        `Generate 20 search prompts for "${brand}" (${industry}). Topics: ${selectedTopicNames.map(t => t.name).join(', ')}. Competitors: ${compNames.join(', ') || 'none'}.
-Mix: branded (about ${brand}), unbranded (general), comparison (${brand} vs competitors).
-JSON only: [{"text":"prompt","type":"branded|unbranded|comparison","topic":"topic"}]`,
-        session,
-        10000 // 10 second timeout
-      )
+      
+      if (!session) {
+        console.error('[Wizard] No auth session, using fallback')
+        generateFallbackPrompts()
+        return
+      }
+      
+      console.log('[Wizard] Calling AI for prompt generation...')
+      
+      const prompt = `Generate 20 search prompts that someone might ask AI assistants about "${brand}" in the ${industry} industry.
+
+Topics to cover: ${selectedTopicNames.map(t => t.name).join(', ')}
+Competitors: ${compNames.join(', ') || 'none specified'}
+
+Create a mix of:
+- branded: Questions specifically about ${brand}
+- unbranded: General industry questions where ${brand} could be recommended  
+- comparison: ${brand} vs competitor questions
+
+Return ONLY a JSON array, no other text:
+[{"text":"the search prompt","type":"branded|unbranded|comparison","topic":"TopicName"}]`
+
+      const result = await queryAI('openai/gpt-4o-mini', prompt, session, 20000)
+      
+      console.log('[Wizard] AI response received:', result?.success, result?.response?.length || 0)
       
       if (result?.success && result?.response) {
-        const match = result.response.match(/\[[\s\S]*?\]/)
-        if (match) {
+        // Try to find JSON array in response
+        const jsonMatch = result.response.match(/\[[\s\S]*\]/)
+        
+        if (jsonMatch) {
           try {
-            const parsed = JSON.parse(match[0])
+            const parsed = JSON.parse(jsonMatch[0])
+            console.log('[Wizard] Parsed prompts:', parsed.length)
+            
             if (Array.isArray(parsed) && parsed.length > 0) {
               const allPrompts = parsed.map((p, i) => {
                 const topic = selectedTopicNames.find(t => 
                   t.name.toLowerCase() === (p.topic || '').toLowerCase()
-                ) || selectedTopicNames[0]
+                ) || selectedTopicNames[i % selectedTopicNames.length] || selectedTopicNames[0]
+                
                 return {
                   id: `prompt-${i}`,
                   topicId: topic?.id,
                   topicName: topic?.name || p.topic,
-                  text: p.text,
+                  text: p.text || p.prompt || '',
                   type: p.type || 'unbranded'
                 }
-              })
-              setPrompts(allPrompts)
-              setGenerating(false)
-              return
+              }).filter(p => p.text) // Filter out any empty prompts
+              
+              if (allPrompts.length > 0) {
+                console.log('[Wizard] Setting', allPrompts.length, 'prompts')
+                setPrompts(allPrompts)
+                setGenerating(false)
+                return
+              }
             }
-          } catch (e) {
-            console.error('Parse error:', e)
+          } catch (parseErr) {
+            console.error('[Wizard] JSON parse error:', parseErr.message)
           }
+        } else {
+          console.error('[Wizard] No JSON array found in response')
         }
+      } else {
+        console.error('[Wizard] API call failed or empty response')
       }
-      // Fallback
+      
+      // If we get here, AI generation failed - use fallback
+      console.log('[Wizard] Using fallback prompts')
       generateFallbackPrompts()
-    } catch (e) {
-      console.error('Generate prompts error:', e)
+      
+    } catch (err) {
+      console.error('[Wizard] Generate prompts error:', err.message)
       generateFallbackPrompts()
     }
   }
@@ -581,14 +647,33 @@ JSON only: [{"text":"prompt","type":"branded|unbranded|comparison","topic":"topi
                 <div className="flex flex-col items-center justify-center py-12">
                   <div className="flex items-center text-white/40">
                     {Icons.loader}
-                    <span className="ml-2">Generating prompts...</span>
+                    <span className="ml-2">Generating prompts with AI...</span>
                   </div>
+                  <p className="text-[12px] text-white/30 mt-2">This may take 10-20 seconds</p>
                   <button 
                     onClick={() => generateFallbackPrompts()}
-                    className="mt-4 text-[13px] text-amber-400 hover:text-amber-300"
+                    className="mt-4 px-4 py-2 rounded-lg bg-white/[0.05] border border-white/[0.08] text-[13px] text-amber-400 hover:bg-white/[0.08] transition"
                   >
-                    Skip and use default prompts
+                    Skip → Use default prompts instead
                   </button>
+                </div>
+              ) : prompts.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12">
+                  <p className="text-[14px] text-white/50 mb-4">No prompts generated yet</p>
+                  <div className="flex gap-3">
+                    <button 
+                      onClick={() => generatePrompts()}
+                      className="px-4 py-2 rounded-lg bg-amber-500/20 border border-amber-500/30 text-[13px] text-amber-400 hover:bg-amber-500/30 transition"
+                    >
+                      🔄 Try AI Generation
+                    </button>
+                    <button 
+                      onClick={() => generateFallbackPrompts()}
+                      className="px-4 py-2 rounded-lg bg-white/[0.05] border border-white/[0.08] text-[13px] text-white/60 hover:bg-white/[0.08] transition"
+                    >
+                      Use Default Prompts
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <>
