@@ -32,7 +32,7 @@ function Logo({ size = 32 }) {
 }
 
 // Input component
-function Input({ label, icon, error, ...props }) {
+function Input({ label, icon, error, className, disabled, ...props }) {
   return (
     <div>
       {label && <label className="block text-[13px] font-medium text-white/70 mb-2">{label}</label>}
@@ -43,7 +43,8 @@ function Input({ label, icon, error, ...props }) {
           </div>
         )}
         <input
-          className={`w-full bg-white/[0.03] border ${error ? 'border-red-500/50' : 'border-white/[0.08]'} rounded-xl px-4 py-3 ${icon ? 'pl-11' : ''} text-[14px] text-white placeholder-white/30 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20 transition-all`}
+          className={`w-full bg-white/[0.03] border ${error ? 'border-red-500/50' : 'border-white/[0.08]'} rounded-xl px-4 py-3 ${icon ? 'pl-11' : ''} text-[14px] text-white placeholder-white/30 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20 transition-all ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${className || ''}`}
+          disabled={disabled}
           {...props}
         />
       </div>
@@ -307,7 +308,6 @@ export default function ProfilePage() {
                   type="email"
                   value={user?.email || ''}
                   disabled
-                  className="opacity-50 cursor-not-allowed"
                 />
                 
                 <Input
