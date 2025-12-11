@@ -129,24 +129,46 @@ export const db = {
     },
 
     async create(brand) {
+      console.log('[DB] Creating brand:', brand.name)
+      
       const { data, error } = await supabase
         .from('brands')
         .insert(brand)
         .select()
         .single()
-      if (error) throw error
+      
+      if (error) {
+        console.error('[DB] Create error:', error.message, error.code, error.details)
+        throw error
+      }
+      
+      console.log('[DB] Create success:', data?.id)
       return data
     },
 
     async update(brandId, updates) {
-      const { data, error } = await supabase
-        .from('brands')
-        .update(updates)
-        .eq('id', brandId)
-        .select()
-        .single()
-      if (error) throw error
-      return data
+      console.log('[DB] Updating brand:', brandId)
+      console.log('[DB] Update fields:', Object.keys(updates))
+      
+      try {
+        const { data, error } = await supabase
+          .from('brands')
+          .update(updates)
+          .eq('id', brandId)
+          .select()
+          .single()
+        
+        if (error) {
+          console.error('[DB] Update error:', error.message, error.code, error.details, error.hint)
+          throw new Error(error.message || 'Database update failed')
+        }
+        
+        console.log('[DB] Update success:', data?.id)
+        return data
+      } catch (err) {
+        console.error('[DB] Update exception:', err)
+        throw err
+      }
     },
 
     async delete(brandId) {
@@ -176,11 +198,22 @@ export const db = {
     },
 
     async create(results) {
+      console.log(`[DB] Inserting ${results.length} results into test_results`)
       const { data, error } = await supabase
         .from('test_results')
         .insert(results)
         .select()
-      if (error) throw error
+      
+      if (error) {
+        console.error(`[DB] Insert error:`, error)
+        console.error(`[DB] Error message:`, error.message)
+        console.error(`[DB] Error code:`, error.code)
+        console.error(`[DB] Error hint:`, error.hint)
+        console.error(`[DB] Error details:`, error.details)
+        throw error
+      }
+      
+      console.log(`[DB] Insert success, returned ${data?.length || 0} rows`)
       return data
     },
 

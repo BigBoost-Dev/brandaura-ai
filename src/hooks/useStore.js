@@ -167,13 +167,16 @@ export const useBrandsStore = create(
 
       // Update brand
       updateBrand: async (brandId, updates) => {
+        console.log('[Store] updateBrand called:', brandId)
         try {
           const updatedBrand = await db.brands.update(brandId, updates)
+          console.log('[Store] updateBrand success, updating state')
           set(state => ({
             brands: state.brands.map(b => b.id === brandId ? updatedBrand : b)
           }))
           return updatedBrand
         } catch (error) {
+          console.error('[Store] updateBrand error:', error)
           set({ error: error.message })
           throw error
         }

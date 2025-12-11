@@ -336,8 +336,16 @@ Return ONLY a JSON array, no other text:
   }
 
   const handleComplete = async () => {
+    console.log('[Wizard] handleComplete starting...')
     setLoading(true)
     setError('')
+    
+    // Add timeout to prevent infinite hang
+    const timeoutId = setTimeout(() => {
+      console.error('[Wizard] Save timeout after 30s')
+      setError('Save timed out. Please try again.')
+      setLoading(false)
+    }, 30000)
     
     try {
       const sanitize = (str) => String(str || '').trim().slice(0, 500)
@@ -360,6 +368,14 @@ Return ONLY a JSON array, no other text:
         })),
       }
       
+      console.log('[Wizard] Settings prepared:', {
+        engines: settings.engines.length,
+        topics: settings.topics.length,
+        prompts: settings.prompts.length
+      })
+      
+      // Don't double-stringify - if DB column is JSONB, pass object; if TEXT, pass string
+      // Supabase JSONB columns accept objects directly
       const brandData = {
         name: cleanBrandName,
         domain: cleanWebsite.replace(/^https?:\/\//, '').replace(/\/$/, ''),
@@ -369,20 +385,32 @@ Return ONLY a JSON array, no other text:
         use_case: 'enterprise',
         competitors: JSON.stringify(competitors.slice(0, 10).map(c => ({ name: c.name }))),
         selected_platforms: JSON.stringify(selectedEngines),
-        settings
+        settings: settings  // Pass as object for JSONB, will be handled by Supabase
       }
       
+      console.log('[Wizard] Brand data prepared, isEditMode:', isEditMode, 'brandId:', editBrand?.id)
+      
       if (isEditMode && editBrand?.id) {
-        await updateBrand(editBrand.id, brandData)
+        console.log('[Wizard] Updating existing brand...')
+        const result = await updateBrand(editBrand.id, brandData)
+        console.log('[Wizard] Update complete:', result?.id)
       } else {
+        console.log('[Wizard] Creating new brand...')
         const newBrand = await addBrand({ user_id: userId, ...brandData })
+        console.log('[Wizard] Created brand:', newBrand?.id)
         if (newBrand?.id) setActiveBrand(newBrand.id)
       }
       
+      clearTimeout(timeoutId)
+      
+      console.log('[Wizard] Reloading brands...')
       if (userId) await loadBrands(userId)
+      
+      console.log('[Wizard] Calling onComplete...')
       if (onComplete) onComplete()
     } catch (e) {
-      console.error('Save error:', e)
+      clearTimeout(timeoutId)
+      console.error('[Wizard] Save error:', e)
       setError(e?.message || 'Failed to save. Please try again.')
     } finally {
       setLoading(false)
