@@ -32,6 +32,7 @@ create table public.brands (
   user_id             uuid not null references auth.users(id) on delete cascade,
   name                text not null,
   domain              text,
+  website             text,
   category            text,
   industry            text,
   use_case            text,
