@@ -19,8 +19,9 @@ serve(async (req) => {
   try {
     // Get API key from environment (set via: supabase secrets set OPENROUTER_API_KEY=xxx)
     const OPENROUTER_API_KEY = Deno.env.get('OPENROUTER_API_KEY')
-    if (!OPENROUTER_API_KEY) {
-      throw new Error('OPENROUTER_API_KEY not configured')
+    // Either provider is acceptable; per-model check happens once we know the model.
+    if (!OPENROUTER_API_KEY && !Deno.env.get('OPENAI_API_KEY')) {
+      throw new Error('No AI provider key configured')
     }
 
     // Verify user is authenticated
@@ -78,6 +79,88 @@ serve(async (req) => {
     // Call OpenRouter API
     const startTime = Date.now()
     
+    // --- OpenAI Responses API lane: ChatGPT models return fan-out queries + citations ---
+    const OPENAI_KEY = Deno.env.get('OPENAI_API_KEY')
+    const lowerModel = String(model).toLowerCase()
+    const isChatGPT = lowerModel.indexOf('gpt') === 0 || lowerModel.indexOf('openai/') === 0 || lowerModel.indexOf('o3') === 0 || lowerModel.indexOf('o4') === 0
+
+    if (isChatGPT && OPENAI_KEY) {
+      const oaiModel = lowerModel.indexOf('openai/') === 0 ? String(model).slice(7) : String(model)
+      const oaiRes = await fetch('https://api.openai.com/v1/responses', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + OPENAI_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: oaiModel,
+          tools: [{ type: 'web_search' }],
+          tool_choice: 'auto',
+          instructions: 'You are a research assistant answering a user question. You MUST use the web_search tool to look up current information before you answer. Run several targeted web searches with different queries, covering the question from multiple angles. Do not answer from prior knowledge alone.',
+          input: query
+        })
+      })
+
+      if (!oaiRes.ok) {
+        const errTxt = await oaiRes.text()
+        console.error('OpenAI Responses error:', errTxt.slice(0, 300))
+        return new Response(
+          JSON.stringify({ error: 'OpenAI API error: ' + oaiRes.status }),
+          { status: oaiRes.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      const oai = await oaiRes.json()
+      const out = oai.output || []
+      const fanout = []
+      const citations = []
+      let text = ''
+
+      for (const item of out) {
+        if (item.type === 'web_search_call') {
+          const act = item.action || {}
+          if (Array.isArray(act.queries)) {
+            for (const q of act.queries) { if (q && fanout.indexOf(q) === -1) fanout.push(q) }
+          } else if (act.query && fanout.indexOf(act.query) === -1) {
+            fanout.push(act.query)
+          }
+        }
+        if (item.type === 'message' && Array.isArray(item.content)) {
+          for (const c of item.content) {
+            if (c.type === 'output_text') {
+              text += c.text || ''
+              const anns = c.annotations || []
+              for (const an of anns) {
+                if (an.type === 'url_citation') citations.push({ url: an.url, title: an.title || '' })
+              }
+            }
+          }
+        }
+      }
+
+      const responseTimeOai = Date.now() - startTime
+
+      if (profile) {
+        await supabase.from('profiles')
+          .update({ api_calls_used: profile.api_calls_used + 1, updated_at: new Date().toISOString() })
+          .eq('id', user.id)
+      }
+
+      return new Response(JSON.stringify({
+        id: oai.id,
+        model: oaiModel,
+        choices: [{ message: { role: 'assistant', content: text }, finish_reason: 'stop' }],
+        usage: oai.usage,
+        fanout_queries: fanout,
+        citations: citations,
+        response_time: responseTimeOai
+      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+
+    if (!OPENROUTER_API_KEY) {
+      return new Response(
+        JSON.stringify({ error: 'OPENROUTER_API_KEY not configured for model: ' + model }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     const aiResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {

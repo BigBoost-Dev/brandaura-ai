@@ -111,7 +111,7 @@ export function useTracking() {
 
           try {
             console.log(`[Loop] Calling queryAI...`)
-            const { success, response, cost, error } = await queryAI(engine.model, prompt.text, session, 45000)
+            const { success, response, cost, error, fanout_queries, citations } = await queryAI(engine.model, prompt.text, session, 45000)
             console.log(`[Loop] queryAI returned: success=${success}`)
 
             if (abortRef.current?.signal.aborted) break
@@ -168,7 +168,10 @@ export function useTracking() {
                 confidence: analysis.confidence,
                 confidence_score: analysis.confidence,
                 competitor_mentions: analysis.competitorMentions || {},
-                cited_urls: analysis.citedUrls || [],
+                cited_urls: (citations && citations.length)
+                  ? citations.map(function (c) { return c.url })
+                  : (analysis.citedUrls || []),
+                fanout_queries: fanout_queries || [],
                 sources: sources,
                 snippet: analysis.snippet,
                 word_count: analysis.wordCount,

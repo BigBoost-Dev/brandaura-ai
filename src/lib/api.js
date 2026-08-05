@@ -58,6 +58,8 @@ export async function queryAI(model, query, session, timeoutMs = 45000) {
     return {
       success: true,
       response: data.choices?.[0]?.message?.content || '',
+      fanout_queries: data.fanout_queries || [],
+      citations: data.citations || [],
       usage: data.usage,
       cost: data.usage ? (data.usage.prompt_tokens * 0.000001 + data.usage.completion_tokens * 0.000002) : 0
     }
