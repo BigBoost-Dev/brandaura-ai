@@ -72,36 +72,10 @@ export async function executeRecaptcha(action = 'submit') {
   }
 }
 
-// Verify reCAPTCHA token on backend
-// This should be called from a serverless function or backend
-export async function verifyRecaptchaToken(token) {
-  if (!token) return { success: true, score: 1 } // Skip if no token
-  
-  const secretKey = import.meta.env.VITE_RECAPTCHA_SECRET_KEY
-  
-  if (!secretKey) {
-    console.warn('reCAPTCHA secret key not configured')
-    return { success: true, score: 1 }
-  }
-
-  try {
-    const response = await fetch('https://www.google.com/recaptcha/api/siteverify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: `secret=${secretKey}&response=${token}`
-    })
-    
-    const data = await response.json()
-    return {
-      success: data.success,
-      score: data.score || 0,
-      action: data.action
-    }
-  } catch (error) {
-    console.error('reCAPTCHA verification failed:', error)
-    return { success: false, score: 0 }
-  }
-}
+// Token verification must happen on a server (e.g. a Supabase edge function that
+// reads the reCAPTCHA secret from server-side secrets). Never verify in the browser:
+// any VITE_* variable is inlined into the public JS bundle, so a secret placed in
+// VITE_RECAPTCHA_SECRET_KEY would be readable by every visitor.
 
 // Check if score is acceptable (0.5+ is generally human)
 export function isHuman(score, threshold = 0.5) {
@@ -111,6 +85,5 @@ export function isHuman(score, threshold = 0.5) {
 export default {
   initRecaptcha,
   executeRecaptcha,
-  verifyRecaptchaToken,
   isHuman
 }
